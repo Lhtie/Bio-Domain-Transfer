@@ -84,6 +84,20 @@ def convert_ans(content, response):
         pt += 1
     return tags
 
+def convert_ans_fillall(content, response):
+    tags = ['O'] * len(content)
+    for line in response.split('\n'):
+        if ">, " in line:
+            for ctx in line.split(">, "):
+                if " <" in ctx:
+                    token, tag = ctx.split(" <")[:2]
+                    token = token.split(' ')
+                    tag = tag.lstrip('<').rstrip('>')
+                    for pt in range(0, len(content) - len(token) + 1):
+                        if content[pt:pt+len(token)] == token:
+                            tags[pt:pt+len(token)] = ["B-" + tag] + ["I-" + tag] * (len(token) - 1)
+    return tags
+
 def requestAPI(idx, content, preds):
     prompts = [
         {
@@ -162,4 +176,11 @@ if __name__ == '__main__':
     dataConfig = chemdner(data_dir)
     dataset = dataConfig.load_dataset()['evaluation']
     chatgpt_chemdner(dataset)
+
+    # preds = load_file()
+    # for idx, batch in enumerate(dataset):
+    #     pred = convert_ans_fillall(batch['tokens'], preds[str(idx)][0])
+    #     preds[str(idx)][1] = pred
+    # save_file(preds)
+    
     evalution(dataConfig, dataset)

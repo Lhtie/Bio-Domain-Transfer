@@ -32,7 +32,8 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
 
     best_f1, best_epoch, best_model = -1, -1, None
     best_epoch = torch.tensor(best_epoch).to(cfg.device)
-    for epoch in range(cfg.TRAIN.EPOCHS):
+    epoch = 0
+    while True:
         if cfg.local_rank in [-1, 0]:
             cfg.logger.info(f"Epoch: {epoch}")
         # train
@@ -112,8 +113,8 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
             dist.reduce(tp_sum, dst=0, op=dist.ReduceOp.SUM)
             dist.reduce(true_sum, dst=0, op=dist.ReduceOp.SUM)
         if cfg.local_rank in [-1, 0]:
-            if pred_sum.sum() == 0 or true_sum.sum() == 0:
-                f1 = 0
+            if pred_sum.sum() == 0 or tp_sum.sum() == 0 or true_sum.sum() == 0:
+                precision, recall, f1 = 0, 0, 0
             else:
                 precision = tp_sum.sum() / pred_sum.sum()
                 recall = tp_sum.sum() / true_sum.sum()
@@ -127,11 +128,13 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
                 cfg.logger.info(f"Best epoch: {best_epoch}, Best f1: {best_f1}")
         if cfg.local_rank != -1:
             dist.broadcast(best_epoch, src=0)
-        # early stop
-        if epoch >= 20 and epoch - best_epoch >= 5:
+        # stop condition
+        if epoch >= cfg.TRAIN.EPOCHS and epoch - best_epoch >= 10:
             if cfg.local_rank in [-1, 0]:
                 cfg.logger.info(f"Best checkpoint at {best_epoch} epoch and stopped")
             break
+        
+        epoch += 1
     return best_model
 
 def get(cfg, model):
