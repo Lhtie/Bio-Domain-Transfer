@@ -1,0 +1,36 @@
+MODEL:
+  BACKBONE: bert-base-uncased
+  PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
+  
+ADAPTER:
+  TRAIN: None
+  EVAL: biomedical_ner_bert-base-uncased_2stage
+
+DATA:
+  SRC_DATASET: biomedical
+  BIOMEDICAL:
+    - id
+  TGT_DATASET: chemdner
+  GRANULARITY: para
+
+TRAIN:
+  SRC_EPOCHS: 100
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
+  LR: 0.0001
+  ORACLE: False
+  TWO_STAGE: True
+
+EVAL:
+  OVERWRITE: True
+  BATCH_SIZE: 128
+
+LOSSES:
+  NAME: CrossEntropy
+
+OUTPUT:
+  ADAPTER_SAVE_DIR: adapter/para/id
+  HEAD_SAVE_DIR: head/para/id
+  RESULT_SAVE_DIR: results/para/id

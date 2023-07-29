@@ -1,0 +1,44 @@
+MODEL:
+  BACKBONE: bert-base-uncased
+  PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
+  
+ADAPTER:
+  TRAIN: None
+  EVAL: biomedical_ner_bert-base-uncased_2stage
+
+DATA:
+  SRC_DATASET: biomedical
+  BIOMEDICAL:
+    - cg
+  TGT_DATASET: chemdner
+  GRANULARITY: para
+
+TRAIN:
+  SRC_EPOCHS: 120
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
+  LR: 0.0001
+  ORACLE: False
+  TWO_STAGE: True
+  SEED: 42
+
+EVAL:
+  OVERWRITE: True
+  BATCH_SIZE: 128
+
+LOSSES:
+  NAME: CE_MS
+  LAMBDA: 0.1
+  MULTI_SIMILARITY_LOSS:
+    SCALE_POS: 2.0
+    SCALE_NEG: 5.0
+    SCALE_POS_WEIGHT: 6.0
+    SCALE_NEG_WEIGHT: 10.0
+    VANILA: False
+
+OUTPUT:
+  ADAPTER_SAVE_DIR: adapter/para/ms/cg
+  HEAD_SAVE_DIR: head/para/ms/cg
+  RESULT_SAVE_DIR: results/para/ms/cg
