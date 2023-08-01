@@ -2,13 +2,16 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import os
+import json
 import datasets
 import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset, Dataset, DatasetDict
-from .biomedical_base import BiomedicalBaseDataConfig
+
+from .biomedical_base import BiomedicalBaseDataConfig, Event
 
 data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/bionlp-st-2013-cg/original-data"
+emb_tp_path = "dataConfig/embedding_templates/cg_tp.json"
 split_dir = {
     "training": "train", 
     "development": "devel",
@@ -16,8 +19,8 @@ split_dir = {
 }
 
 class cg(BiomedicalBaseDataConfig):
-    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False):
-        super().__init__("CancerGenetics", tokenizer_name, granularity, cache_dir, overwrite)
+    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, sim_method=None):
+        super().__init__("CancerGenetics", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
 
         self.labels = [ 
             'O', 'B-Simple_chemical', 'I-Simple_chemical', 'B-Organism', 'I-Organism', 'B-Organism_subdivision', 'I-Organism_subdivision', 'B-Anatomical_system', 'I-Anatomical_system', 'B-Organ', 'I-Organ', 'B-Multi-tissue_structure', 'I-Multi-tissue_structure', 'B-Tissue', 'I-Tissue', 'B-Developing_anatomical_structure', 'I-Developing_anatomical_structure', 'B-Cell', 'I-Cell', 'B-Cellular component', 'I-Cellular component', 'B-Organism_substance', 'I-Organism_substance', 'B-Immaterial_anatomical_entity', 'I-Immaterial_anatomical_entity', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Protein_domain_or_region', 'I-Protein_domain_or_region', 'B-Amino_acid', 'I-Amino_acid', 'B-DNA_domain_or_region', 'I-DNA_domain_or_region', 'B-Pathological_formation', 'I-Pathological_formation', 'B-Cancer', 'I-Cancer'
@@ -45,14 +48,75 @@ class cg(BiomedicalBaseDataConfig):
             "Pathological_formation": 33,
             "Cancer": 35
         }
-        
-    def load_raw_data(self):
-        for split, s_dir in split_dir.items():
-            self.read_from_file(os.path.join(data_dir, s_dir), split)
+
+    def convert(self, key):
+        if key == "AtLoc" or key == "ToLoc" or key == "FromLoc":
+            return "Site"
+        elif key == "Participant":
+            return "Theme"
+        else:
+            return key
+
+    def pre_parse(self, lines, pmid, id2entity):
+        triggers, msgs = {}, {}
+        for line in lines:
+            if line.startswith("T"):
+                idx, middle, entity = line.strip().split('\t')
+                triggers[idx] = entity.lower()
+                id2entity[pmid+idx] = entity.lower()
+            if line.startswith("M"):
+                _, msg = line.strip().split('\t')
+                type, idx = msg.strip().split(' ')
+                if idx not in msgs:
+                    msgs[idx] = set()
+                msgs[idx].add(type)
+        return triggers, msgs
+
+    def parse(self, lines, pmid, id2entity, triggers, msgs):
+        for line in lines:
+            if line.startswith("*"):
+                t1, t2 = line.strip().split(' ')[-2:]
+                self.add_relation(id2entity[pmid+t1], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
+                self.add_relation(id2entity[pmid+t2], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
+            if line.startswith("E"):
+                idx, ctx = line.strip().split('\t')
+                ctx = ctx.split(' ')
+
+                event_id = ctx[0].split(':')[0]
+                if idx in msgs:
+                    event_id += f" ({', '.join(list(msgs[idx]))})"
+                if ctx[0].split(':')[1] in triggers:
+                    event_id += f": {triggers[ctx[0].split(':')[1]]}"
+
+                args = {}
+                for arg in ctx[1:]:
+                    role, ett = arg.split(':')
+                    role = role.rstrip("0123456789")
+                    # Regulate argument type for concat method
+                    if self.emb_method == "concat" and role not in Event.arguments:
+                        role = self.convert(role)
+                    if ett.startswith("T"):
+                        ett = id2entity[pmid+ett]
+                    elif ett.startswith("E"):
+                        ett = "Nested_Event-" + pmid + ett
+                    else:
+                        raise NotImplementedError()
+
+                    if role not in args:
+                        args[role] = []
+                    args[role].append(ett)
+
+                self.id2event[pmid+idx] = Event(event_id, **args)
+                for key, vals in args.items():
+                    for id, val in enumerate(vals):
+                        if not val.startswith("Nested_Event"):
+                            pad_tp = f"Pad: {val}, {event_id}, %s"
+                            self.add_relation(val, Event(event_id, pad_tp=pad_tp, **args).set_self((key, id)))
 
     def read_from_file(self, dir, split):
         file_path = os.listdir(dir)
         self.texts[split], self.annotations[split] = {}, {}
+        id2entity = {}
         for file in tqdm(file_path):
             if file.endswith(".txt"):
                 with open(os.path.join(dir, file), "r") as f:
@@ -67,44 +131,27 @@ class cg(BiomedicalBaseDataConfig):
                         idx, middle, entity = line.strip().split('\t')
                         label, start, end = middle.split(' ')
                         self.annotations[split][file[:-3]].append((
-                            int(start), int(end), entity, label, pmid + idx
+                            int(start), int(end), entity, label, entity.lower()
                         ))
                         if split == "training":
-                            self.add_relation(pmid + idx, None)
+                            self.add_relation(entity.lower(), None)
+                            id2entity[pmid+idx] = entity.lower()
         # Construct mutual similarity
         if split == "training":
-            equiv_id = 0
-            id2rel_type = {}
             for file in tqdm(file_path):
                 if file.endswith(".a2"):
                     pmid = file[:-3]
                     with open(os.path.join(dir, file), "r") as f:
                         lines = f.readlines()
-                        for line in lines:
-                            if line [0] == "E":
-                                id, ctx = line.strip().split('\t')
-                                rel_type = ctx.split(' ')[0].split(':')[0]
-                                id2rel_type[pmid+id] = rel_type
-                        for line in lines:
-                            if line[0] == "*":
-                                t1, t2 = line.strip().split(' ')[-2:]
-                                self.add_relation(pmid + t1, f"Equivalent-{equiv_id}")
-                                self.add_relation(pmid + t2, f"Equivalent-{equiv_id}")
-                                equiv_id += 1
-                            elif line[0] == "E":
-                                id, ctx = line.strip().split('\t')
-                                ctx = ctx.split(' ')
-                                rel_type = ctx[0].split(':')[0]
-                                for arg in ctx[1:]:
-                                    role, ett = arg.split(':')
-                                    if ett.startswith('E'):
-                                        rel_type += f"_{role}:{id2rel_type[pmid+ett]}"
-                                for arg in ctx[1:]:
-                                    role, ett = arg.split(':')
-                                    role = role.rstrip("0123456789")
-                                    if ett.startswith('T'):
-                                        self.add_relation(pmid + ett, f"{rel_type}-{role}")
+                        triggers, msgs = self.pre_parse(lines, pmid, id2entity)
+                        self.parse(lines, pmid, id2entity, triggers, msgs)
 
+    def load_raw_data(self):
+        with open(emb_tp_path, "r") as f:
+            self.emb_tp = json.load(f)
+        for split, s_dir in split_dir.items():
+            self.read_from_file(os.path.join(data_dir, s_dir), split)
+    
     def load_dataset(self, tokenizer=None):
         dataset = DatasetDict()
         for split in ['training', 'development', 'evaluation']:

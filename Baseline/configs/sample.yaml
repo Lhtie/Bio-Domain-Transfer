@@ -8,8 +8,10 @@ ADAPTER:
 
 DATA:
   SRC_DATASET: biomedical
+  BIOMEDICAL:
+    SIM_METHOD: concat-max
   TGT_DATASET: chemdner
-  GRANULARITY: sent
+  GRANULARITY: para
 
 TRAIN:
   SRC_EPOCHS: 120
@@ -19,7 +21,7 @@ TRAIN:
   SRC_LR: 0.0001
   LR: 0.0001
   ORACLE: False
-  TWO_STAGE: False
+  TWO_STAGE: True
 
 EVAL:
   OVERWRITE: True

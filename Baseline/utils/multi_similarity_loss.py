@@ -12,10 +12,10 @@ class MultiSimilarityLoss(nn.Module):
         self.scale_neg = cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG
         self.scale_pos_w = cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT
         self.scale_neg_w = cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT
-        self.vanila = False
+        self.vanilla = False
         
-        if hasattr(cfg.LOSSES.MULTI_SIMILARITY_LOSS, "VANILA"):
-            self.vanila = cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILA
+        if hasattr(cfg.LOSSES.MULTI_SIMILARITY_LOSS, "VANILLA"):
+            self.vanilla = cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA
 
     def forward(self, feats, labels, sim_weight):
         assert feats.size(0) == labels.size(0), \
@@ -51,7 +51,7 @@ class MultiSimilarityLoss(nn.Module):
                 continue
 
             # weighting step
-            if self.vanila:
+            if self.vanilla:
                 pos_loss = 1.0 / self.scale_pos * torch.log(
                     1 + torch.sum(torch.exp(-self.scale_pos * (pos_pair - self.thresh))))
                 neg_loss = 1.0 / self.scale_neg * torch.log(

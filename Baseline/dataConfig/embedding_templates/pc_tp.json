@@ -1,0 +1,235 @@
+{
+    "Conversion": {
+        "event_type": "Conversion",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Product"
+        ],
+        "template": "A specific trigger <Trigger> causes the transformation of a molecule <Theme> into another molecule <Product>."
+    },
+    "Phosphorylation": {
+        "event_type": "Phosphorylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is modified by the addition of a phosphate group at a particular site <Site>, facilitated by another molecule <Cause>."
+    },
+    "Dephosphorylation": {
+        "event_type": "Dephosphorylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has a phosphate group removed from a particular site <Site>, facilitated by another molecule <Cause>."
+    },
+    "Acetylation": {
+        "event_type": "Acetylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of an acetyl group at a particular site <Site>, catalyzed by another molecule <Cause>."
+    },
+    "Deacetylation": {
+        "event_type": "Deacetylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has an acetyl group removed from a particular site <Site>, facilitated by another molecule <Cause>."
+    },
+    "Ubiquitination": {
+        "event_type": "Ubiquitination",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is modified by the attachment of one or more ubiquitin molecules at a particular site, facilitated by another molecule <Cause>, often involving a simple chemical group <Site> as the site of attachment."
+    },
+    "Deubiquitination": {
+        "event_type": "Deubiquitination",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has ubiquitin molecules removed from a particular site, facilitated by another molecule <Cause> involving a simple chemical group <Site> as the site of removal."
+    },
+    "Hydroxylation": {
+        "event_type": "Hydroxylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of a hydroxyl group at a particular site, catalyzed by another molecule <Cause> involving a simple chemical group <Site> as the site of attachment."
+    },
+    "Dehydroxylation": {
+        "event_type": "Dehydroxylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has a hydroxyl group removed from a particular site, facilitated by another molecule <Cause> involving a simple chemical group <Site> as the site of removal."
+    },
+    "Methylation": {
+        "event_type": "Methylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of a methyl group at a particular site, facilitated by another molecule <Cause> involving a simple chemical group <Site> as the site of attachment."
+    },
+    "Demethylation": {
+        "event_type": "Demethylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has a methyl group removed from a particular site, facilitated by another molecule <Cause> involving a simple chemical group <Site> as the site of removal."
+    },
+    "Localization": {
+        "event_type": "Localization",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc",
+            "FromLoc",
+            "ToLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is directed to or away from a particular cellular component <AtLoc><FromLoc><ToLoc> or subcellular location within the cell."
+    },
+    "Transport": {
+        "event_type": "Transport",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "FromLoc",
+            "ToLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is moved or conveyed to or away from a particular cellular component <FromLoc><ToLoc> or subcellular location within the cell."
+    },
+    "Gene_expression": {
+        "event_type": "Gene_expression",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, genetic information from a gene <Theme> is used to produce a functional gene product, such as RNA or protein."
+    },
+    "Transcription": {
+        "event_type": "Transcription",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, genetic information from a gene <Theme> is transcribed into RNA, usually messenger RNA (mRNA), by RNA polymerase."
+    },
+    "Translation": {
+        "event_type": "Translation",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, the genetic information carried by mRNA <Theme> is used to synthesize a protein by ribosomes in the cell."
+    },
+    "Degradation": {
+        "event_type": "Degradation",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes breakdown or degradation into smaller components."
+    },
+    "Binding": {
+        "event_type": "Binding",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Product"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> interacts and forms a complex with another molecule(s) resulting in the product of a molecular complex <Product>."
+    },
+    "Dissociation": {
+        "event_type": "Dissociation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Product"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific complex <Theme> breaks apart, resulting in the release of individual molecules <Product> as products."
+    },
+    "Regulation": {
+        "event_type": "Regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is controlled or influenced by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Positive_regulation": {
+        "event_type": "Positive_regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is promoted or enhanced by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Activation": {
+        "event_type": "Activation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is stimulated or facilitated by another entity <Cause> to increase its activity, function, or biological effect."
+    },
+    "Negative_regulation": {
+        "event_type": "Negative_regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is inhibited or suppressed by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Inactivation": {
+        "event_type": "Inactivation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is deactivated or rendered inactive by another entity <Cause>, leading to a reduction or cessation of its biological function."
+    },
+    "Pathway": {
+        "event_type": "Pathway",
+        "arguments": [
+            "Trigger",
+            "Participant"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, involving one or more molecules <Participant> that collaborate to accomplish a specific biological function or response."
+    }
+}

@@ -9,7 +9,8 @@ ADAPTER:
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
-    - cg
+    DATASETS:
+      - cg
   TGT_DATASET: chemdner
   GRANULARITY: para
 

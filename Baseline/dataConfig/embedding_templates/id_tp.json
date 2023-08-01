@@ -1,0 +1,95 @@
+{
+    "Gene_expression": {
+        "event_type": "Gene expression",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific protein or a group of genes <Theme> are involved in the transcription and translation of genetic information to produce functional gene products, such as RNA or protein."
+    },
+    "Transcription": {
+        "event_type": "Transcription",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific protein or a group of genes <Theme> are involved in the synthesis of RNA from DNA template by RNA polymerase."
+    },
+    "Protein_catabolism": {
+        "event_type": "Protein catabolism",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific protein <Theme> is broken down or degraded into smaller peptide fragments or amino acids."
+    },
+    "Phosphorylation": {
+        "event_type": "Phosphorylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific protein <Theme> undergoes the addition of a phosphate group at a particular site <Site>, resulting in the modification of the protein's structure and function."
+    },
+    "Localization": {
+        "event_type": "Localization",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc",
+            "ToLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific core entity <Theme> is directed to or away one location <AtLoc><ToLoc> within the cell or organism."
+    },
+    "Binding": {
+        "event_type": "Binding",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific core entity <Theme> interacts and forms a connection with another entity <Site>, leading to the formation of a complex or association."
+    },
+    "Regulation": {
+        "event_type": "Regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site",
+            "CSite"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific core entity or event <Theme> is controlled or influenced by another core entity or event <Cause> through interactions at specific sites  on molecules or entities <Site><CSite>, potentially resulting in modulation of biological processes."
+    },
+    "Positive_regulation": {
+        "event_type": "Positive regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site",
+            "CSite"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific core entity or event <Theme> is promoted or enhanced by another core entity or event <Cause> through interactions at specific sites on molecules or entities <Site><CSite>, potentially resulting in an increase in the intensity or rate of a biological process."
+    },
+    "Negative_regulation": {
+        "event_type": "Negative regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site",
+            "CSite"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific core entity or event <Theme> is inhibited or suppressed by another core entity or event <Cause> through interactions at specific sites on molecules or entities <Site><CSite>, potentially resulting in a decrease in the intensity or rate of a biological process."
+    },
+    "Process": {
+        "event_type": "Process",
+        "arguments": [
+            "Trigger",
+            "Participant"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, involving a core entity that collaborates to accomplish a specific biological function or response."
+    }
+}

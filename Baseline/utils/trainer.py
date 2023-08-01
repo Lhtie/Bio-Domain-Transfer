@@ -14,8 +14,8 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
     ce_loss_fn = nn.CrossEntropyLoss(reduction='none')
     if use_ms:
         get(cfg, model).active_head = None
-        cfg.data.sim_weight = cfg.data.sim_weight.to(cfg.device)
         ms_loss_fn = MultiSimilarityLoss(cfg)
+        cfg.data.sim_weight = cfg.data.sim_weight.to(cfg.device)
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
                     {

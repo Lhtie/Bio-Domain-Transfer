@@ -14,6 +14,7 @@ class BaseDataConfig(ABC):
         self.ds_name = ds_name
         self.tokenizer_name = tokenizer_name
         self.granularity = granularity
+        self.cache_dir = cache_dir
         self.cache_file = os.path.join(cache_dir, f"{ds_name}_{tokenizer_name}_{granularity}_tensorized.pt")
         self.overwrite = overwrite
         os.makedirs(cache_dir, exist_ok=True)

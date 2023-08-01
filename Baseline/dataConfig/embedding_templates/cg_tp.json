@@ -1,0 +1,367 @@
+{
+    "Development": {
+        "event_type": "Development",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological entity <Theme> undergoes progressive changes or growth, leading to the formation of a more complex and specialized structure or condition over time."
+    },
+    "Blood_vessel_development": {
+        "event_type": "Blood vessel development",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, blood vessels <Theme> undergo progressive changes or growth at a specific location <AtLoc>, leading to the formation and maturation of the vascular network."
+    },
+    "Growth": {
+        "event_type": "Growth",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological entity <Theme> undergoes an increase in size, quantity, or complexity over time."
+    },
+    "Death": {
+        "event_type": "Death",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological entity <Theme> ceases to exhibit signs of life and undergoes irreversible loss of vital functions."
+    },
+    "Cell_death": {
+        "event_type": "Cell death",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific cell <Theme> undergoes a series of events leading to its own demise, often through programmed cell death or other mechanisms."
+    },
+    "Breakdown": {
+        "event_type": "Breakdown",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological structure <Theme> disintegrates, decomposes, or undergoes degradation over time."
+    },
+    "Cell_proliferation": {
+        "event_type": "Cell proliferation",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific cell <Theme> undergoes rapid and controlled replication or division, leading to an increase in the number of daughter cells."
+    },
+    "Cell_division": {
+        "event_type": "Cell division",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific cell <Theme> divides into two or more daughter cells through mitosis or meiosis."
+    },
+    "Cell_differentiation": {
+        "event_type": "Cell differentiation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific cell <Theme> undergoes changes in gene expression and morphology to become specialized and acquire distinct functions at a specific anatomical or pathological location <AtLoc>."
+    },
+    "Remodeling": {
+        "event_type": "Remodeling",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific tissue <Theme> undergoes structural changes, reorganization, and modification in response to various stimuli or during growth and development."
+    },
+    "Reproduction": {
+        "event_type": "Reproduction",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific organism <Theme> produces offspring through sexual or asexual means, leading to the continuation of the species."
+    },
+    "Mutation": {
+        "event_type": "Mutation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc",
+            "Site"
+        ],
+        "template": "indicated by the given trigger <Trigger>, a specific gene, genome, or protein <Theme> undergoes a heritable change in its genetic sequence or structure at a particular site <Site>, potentially leading to alterations in its function or expression within a specific anatomical or pathological context <AtLoc>."
+    },
+    "Carcinogenesis": {
+        "event_type": "Carcinogenesis",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological entity <Theme> undergoes a series of genetic and cellular changes at a specific anatomical or pathological location <AtLoc>, leading to the development of cancer."
+    },
+    "Cell_transformation": {
+        "event_type": "Cell transformation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific cell <Theme> undergoes changes in its phenotype, function, or behavior at a specific anatomical or pathological location <AtLoc>, often associated with the acquisition of abnormal or cancerous characteristics."
+    },
+    "Metastasis": {
+        "event_type": "Metastasis",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "ToLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific anatomical or pathological entity <Theme> spreads and establishes secondary growths or lesions at a different anatomical or pathological location <ToLoc> from the primary tumor site."
+    },
+    "Infection": {
+        "event_type": "Infection",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Participant"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an organism <Participant> invades and establishes itself in a specific anatomical or pathological site <Theme>, leading to a disease condition."
+    },
+    "Metabolism": {
+        "event_type": "Metabolism",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, collective chemical reactions occur within an organism <Theme> involving the processing, transformation, and utilization of specific molecules to maintain cellular functions and energy requirements."
+    },
+    "Synthesis": {
+        "event_type": "Synthesis",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific simple chemical <Theme> is produced or created through chemical reactions or biological processes."
+    },
+    "Catabolism": {
+        "event_type": "Catabolism",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes chemical reactions or metabolic pathways to break down into simpler compounds, releasing energy in the process."
+    },
+    "Amino_acid_catabolism": {
+        "event_type": "Amino_acid_catabolism",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific amino acid <Theme> is broken down through metabolic pathways, leading to the release of energy and the generation of byproducts like ammonia and carbon compounds."
+    },
+    "Glycolysis": {
+        "event_type": "Glycolysis",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes a series of enzymatic reactions, ultimately converting glucose into pyruvate and producing ATP and NADH as energy carriers."
+    },
+    "Glycosylation": {
+        "event_type": "Glycosylation",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of carbohydrate molecules (glycans) to specific sites, typically on proteins or lipids, leading to the formation of glycoproteins or glycolipids with diverse biological functions."
+    },
+    "Acetylation": {
+        "event_type": "Acetylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of an acetyl group at a particular site <Site>, catalyzed by another molecule <Cause>."
+    },
+    "Deacetylation": {
+        "event_type": "Deacetylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has an acetyl group removed from a particular site <Site>, facilitated by another molecule <Cause>."
+    },
+    "Ubiquitination": {
+        "event_type": "Ubiquitination",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is modified by the attachment of one or more ubiquitin molecules at a particular site, facilitated by another molecule <Cause>, often involving a simple chemical group <Site> as the site of attachment."
+    },
+    "Deubiquitination": {
+        "event_type": "Deubiquitination",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has ubiquitin molecules removed from a particular site, facilitated by another molecule <Cause> involving a simple chemical group <Site> as the site of removal."
+    },
+    "Gene_expression": {
+        "event_type": "Gene expression",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific gene, genome, or protein <Theme> is activated, leading to the production of RNA or protein and subsequent biological functions."
+    },
+    "Transcription": {
+        "event_type": "Transcription",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, genetic information from a specific gene, genome, or RNA molecule <Theme> is used as a template to produce complementary RNA (usually messenger RNA) by RNA polymerase."
+    },
+    "Translation": {
+        "event_type": "Translation",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, the genetic information carried by messenger RNA <Theme> is used to synthesize a protein by ribosomes in the cell."
+    },
+    "Protein_processing": {
+        "event_type": "Protein processing",
+        "arguments": [
+            "Trigger",
+            "Theme"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, the series of post-translational modifications, folding, and transportation of a specific gene, genome, or protein <Theme> in the cell to achieve its mature and functional form."
+    },
+    "Phosphorylation": {
+        "event_type": "Phosphorylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> undergoes the addition of a phosphate group at a particular site <Site> within a protein domain or region, often regulating the molecule's activity or function."
+    },
+    "Dephosphorylation": {
+        "event_type": "Dephosphorylation ",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> has a phosphate group removed from a particular site <Site> within a protein domain or region, often resulting in the modulation or termination of its activity or function."
+    },
+    "DNA_methylation": {
+        "event_type": "DNA methylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific gene or genome <Theme> has a methyl group added to a particular site <Site> within a protein domain or region, often resulting in the regulation of gene expression and epigenetic modifications."
+    },
+    "DNA_demethylation": {
+        "event_type": "DNA demethylation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific gene or genome <Theme> has a methyl group removed from a particular site <Site> within a protein domain or region, often resulting in the modulation of gene expression and epigenetic modifications."
+    },
+    "Pathway": {
+        "event_type": "Pathway",
+        "arguments": [
+            "Trigger",
+            "Participant"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, involving a specific molecule <Participant> that collaborates to accomplish a specific biological function or response."
+    },
+    "Binding": {
+        "event_type": "Binding",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> forms a physical association or interaction with another molecule or region <Site> on a protein or DNA, potentially leading to functional changes or regulatory effects."
+    },
+    "Dissociation": {
+        "event_type": "Dissociation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Site"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> separates or detaches from another molecule or region <Site> on a protein or DNA, leading to the termination or disruption of their interaction or complex formation."
+    },
+    "Localization": {
+        "event_type": "Localization",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "AtLoc",
+            "FromLoc",
+            "ToLoc"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific molecule <Theme> is directed to or away from a particular cellular component <AtLoc><FromLoc><ToLoc> or subcellular location within the cell."
+    },
+    "Regulation": {
+        "event_type": "Regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is controlled or influenced by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Positive_regulation": {
+        "event_type": "Positive_regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is promoted or enhanced by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Negative_regulation": {
+        "event_type": "Negative_regulation",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Cause"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, an entity <Theme> is inhibited or suppressed by another entity <Cause> to achieve a specific biological effect or outcome."
+    },
+    "Planned_process": {
+        "event_type": "Planned process",
+        "arguments": [
+            "Trigger",
+            "Theme",
+            "Instrument"
+        ],
+        "template": "Indicated by the given trigger <Trigger>, a specific entity <Theme> is involved or manipulated using an instrument <Instrument> for a predetermined outcome or purpose."
+    }
+}

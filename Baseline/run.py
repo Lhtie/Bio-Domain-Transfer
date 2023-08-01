@@ -13,78 +13,18 @@ import numpy as np
 import logging
 import evaluate
 
-from utils.trainer import train_ce, train_ce_ms
+from train import train_two_stage
 from utils.trainer import get
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
 
 adapter_dir = "adapter/"
 
-def get_dataloaders(cfg, tokenizer, is_src):
-    if cfg.local_rank not in [-1, 0]:
-        torch.distributed.barrier()
-    if is_src:
-        data = get_src_dataset(cfg)
-    else:
-        data = get_tgt_dataset(cfg)
-    dataset = data.load(tokenizer)
-    if cfg.local_rank == 0:
-        print(dataset)
-        torch.distributed.barrier()
-
-    if cfg.local_rank == -1:
-        train_sampler = None
-    else:
-        train_sampler = DistributedSampler(dataset['training'], shuffle=True, seed=cfg.TRAIN.SEED)
-    batch_size = cfg.TRAIN.SRC_BATCH_SIZE if is_src else cfg.TRAIN.BATCH_SIZE
-    train_dataloader = torch.utils.data.DataLoader(dataset['training'], sampler=train_sampler, batch_size=batch_size // cfg.world_size)
-    dev_dataloader = torch.utils.data.DataLoader(dataset['development'], batch_size=batch_size // cfg.world_size)
-
-    return train_dataloader, dev_dataloader, data
-
-def train_two_stage(cfg, model, tokenizer):
-    # load data
-    train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, True)
-
-    # add adapter
-    adapter_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_2stage"
-    head_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
-    model.add_adapter(adapter_name)
-    model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
-    model.train_adapter([adapter_name])
-    model.to(cfg.device)
-    if cfg.local_rank != -1:
-        model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[cfg.local_rank], output_device=cfg.local_rank)
-
-    # train 4 src
-    cfg.TRAIN.EPOCHS = cfg.TRAIN.SRC_EPOCHS
-    model = train_ce_ms(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, pretrain=True)
-    if cfg.local_rank in [-1, 0]:
-        os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), exist_ok=True)
-        get(cfg, model).save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), adapter_name)
-        cfg.logger.info("Best model for the 1st stage saved")
-
-    # prepare for target
-    train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, False)
-
-    model = AutoAdapterModel.from_pretrained(cfg.MODEL.PATH)
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head_2stage"
-    model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label, overwrite_ok=True)
-    model.train_adapter([adapter_name])
-    model.to(cfg.device)
-    if cfg.local_rank != -1:
-        model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[cfg.local_rank], output_device=cfg.local_rank)
-
-    # train 4 tgt
-    cfg.TRAIN.EPOCHS = cfg.TRAIN.TGT_EPOCHS
-    model = train_ce(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name)
-    return model, adapter_name, head_name
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning_ms_var.yaml")
-    parser.add_argument("--scale_pos", type=int)
-    parser.add_argument("--scale_neg", type=int)
+    parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning_ms.yaml")
+    parser.add_argument("--method", type=str)
+    # parser.add_argument("--scale_pos", type=int)
+    # parser.add_argument("--scale_neg", type=int)
     args = parser.parse_args()
 
     cfg = read_config(args.cfg_file)
@@ -120,11 +60,15 @@ if __name__ == "__main__":
     cfg.logger = logger
     cfg.logger.info(args)
 
-    cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos
-    cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg
-    cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
-    cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
-    cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
+    # cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos
+    # cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
+    # cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
+    # cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
+    cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
+    cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.method}"
+    cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.method}"
+    cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.method}"
 
     # load model
     model_name = cfg.MODEL.PATH
@@ -166,5 +110,4 @@ if __name__ == "__main__":
 
         seqeval = evaluate.load('evaluate-metric/seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
-        print(f"Currently Trying pos_weight, neg_weight as {args.scale_pos}, {args.scale_neg}")
         print(results)

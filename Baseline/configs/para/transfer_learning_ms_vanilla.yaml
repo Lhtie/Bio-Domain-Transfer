@@ -20,7 +20,6 @@ TRAIN:
   LR: 0.0001
   ORACLE: False
   TWO_STAGE: True
-  SEED: 42
 
 EVAL:
   OVERWRITE: True
@@ -32,11 +31,11 @@ LOSSES:
   MULTI_SIMILARITY_LOSS:
     SCALE_POS: 2.0
     SCALE_NEG: 5.0
-    SCALE_POS_WEIGHT: 30.0
-    SCALE_NEG_WEIGHT: 34.0
-    VANILA: False
+    SCALE_POS_WEIGHT: 6.0
+    SCALE_NEG_WEIGHT: 10.0
+    VANILLA: True
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/ms/var
-  HEAD_SAVE_DIR: head/para/ms/var
-  RESULT_SAVE_DIR: results/para/ms/var
+  ADAPTER_SAVE_DIR: adapter/para/ms/vanila
+  HEAD_SAVE_DIR: head/para/ms/vanila
+  RESULT_SAVE_DIR: results/para/ms/vanila
