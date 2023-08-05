@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 import numpy as np
 import copy
+import pickle
 
 from tqdm import tqdm
 from .multi_similarity_loss import MultiSimilarityLoss
@@ -14,8 +15,12 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
     ce_loss_fn = nn.CrossEntropyLoss(reduction='none')
     if use_ms:
         get(cfg, model).active_head = None
-        ms_loss_fn = MultiSimilarityLoss(cfg)
         cfg.data.sim_weight = cfg.data.sim_weight.to(cfg.device)
+        ms_loss_fn = [
+            MultiSimilarityLoss(cfg),
+            MultiSimilarityLoss(cfg)
+        ]
+        
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
                     {
@@ -33,23 +38,39 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
     best_f1, best_epoch, best_model = -1, -1, None
     best_epoch = torch.tensor(best_epoch).to(cfg.device)
     epoch = 0
+    pos_pair_thresh, neg_pair_thresh, pos_pair_w, neg_pair_w = [], [], [], []
     while True:
         if cfg.local_rank in [-1, 0]:
             cfg.logger.info(f"Epoch: {epoch}")
         # train
         model.train()
+        ce_losses, ms_disc_losses, ms_clus_losses, losses = [], [], [], []
+
+        if use_ms:
+            ms_loss_fn[0].reset()
+            ms_loss_fn[1].reset()
+
         for i, batch in enumerate(train_dataloader):
             batch = {k: v.to(cfg.device) for k, v in batch.items()}
 
             outputs = model(batch["input_ids"])
             if use_ms:
-                ids, feats, labels = extract_feat(
+                feat_disc, feat_clus = extract_feat(
                     outputs[0], 
                     batched_label_mask=batch["label_mask"],
                     batched_token_id=batch['token_id'],
-                    batched_token_label=batch['ner_tags']
+                    batched_token_label=batch['ner_tags'],
+                    K=cfg.data.K,
+                    clusters=cfg.data.clusters
                 )
-                ms_loss = ms_loss_fn(
+                ids, feats, labels = feat_disc.tensorize()
+                ms_disc_loss = ms_loss_fn[0](
+                    feats,
+                    labels,
+                    sim_weight=cfg.data.sim_weight[ids][:, ids]
+                )
+                ids, feats, labels = feat_clus.tensorize()
+                ms_clus_loss = ms_loss_fn[1](
                     feats,
                     labels,
                     sim_weight=cfg.data.sim_weight[ids][:, ids]
@@ -69,19 +90,40 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
             ce_loss = (ce_loss_fn(predictions, expected) * label_mask).mean()
             
             if use_ms:
-                loss = ce_loss + cfg.LOSSES.LAMBDA * ms_loss
+                loss = ce_loss + cfg.LOSSES.LAMBDA_DISC * ms_disc_loss + cfg.LOSSES.LAMBDA_CLUS * ms_clus_loss
+                ms_disc_losses.append(ms_disc_loss.item())
+                ms_clus_losses.append(ms_clus_loss.item())
             else:
                 loss = ce_loss
+            ce_losses.append(ce_loss.item())
+            losses.append(loss.item())
             loss.backward()
             
             optimizer.step()
             optimizer.zero_grad()
-            if i % 10000 == 0 and cfg.local_rank in [-1, 0]:
-                if use_ms:
-                    cfg.logger.info(f"loss: {loss}, ce:{ce_loss}, ms:{ms_loss}")
-                else:
-                    cfg.logger.info(f"loss: {loss}")
+        if cfg.local_rank in [-1, 0]:
+            if use_ms:
+                cfg.logger.info(f"loss: {np.mean(losses)}")
+                cfg.logger.info(f"ce:{np.mean(ce_losses)}")
+                cfg.logger.info(f"ms_disc:{np.mean(ms_disc_losses)}")
+                cfg.logger.info(f"ms_clus:{np.mean(ms_clus_losses)}")
+            else:
+                cfg.logger.info(f"loss: {np.mean(losses)}")
 
+        if epoch % 10 == 0 and use_ms:
+            pos_pair_thresh.append(torch.concat(ms_loss_fn[0].pos_pair_thresh).cpu().detach())
+            neg_pair_thresh.append(torch.concat(ms_loss_fn[0].neg_pair_thresh).cpu().detach())
+            pos_pair_w.append(torch.concat(ms_loss_fn[0].pos_pair_w).cpu().detach())
+            neg_pair_w.append(torch.concat(ms_loss_fn[0].neg_pair_w).cpu().detach())
+            # dist.barrier()
+            with open(f"results/quantize-{cfg.local_rank}.pt", "wb") as f:
+                pickle.dump((
+                    pos_pair_thresh,
+                    neg_pair_thresh,
+                    pos_pair_w,
+                    neg_pair_w
+                ), f)
+        
         # eval on dev
         model.eval()
         predictions, references = [], []

@@ -9,13 +9,16 @@ import pickle
 
 from utils.SapBERT import SapBERT
 from .base import BaseDataConfig
+from utils.kmeans import *
 
 # Configuration
 eps = 1e-10
 sapbert_path = "/mnt/data/oss_beijing/liuhongyi/models/SapBERT-from-PubMedBERT-fulltext"
+sentbert_path = "/mnt/data/oss_beijing/liuhongyi/models/S-PubMedBert-MS-MARCO-SCIFACT"
 
 from sentence_transformers import SentenceTransformer, util
-sent_model = SentenceTransformer('all-MiniLM-L6-v2')
+# sent_model = SentenceTransformer('all-MiniLM-L6-v2')
+sent_model = SentenceTransformer(sentbert_path)
 
 class Event:
     arguments = ["Theme", "Cause", "Product", "Site"]
@@ -89,7 +92,7 @@ class Event:
         if self.identifier.startswith("Equivalent-"):
             return self.identifier
 
-        event_type, trigger = self.identifier.split(":")
+        event_type, trigger = self.identifier.split(": ")
         self.full_args_map["Trigger"] = [trigger]
         event_tp = tp[event_type.split(" ")[0]]
 
@@ -171,6 +174,23 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
     
     @staticmethod
     def calc_sim_weight(etts, ett_rel_set, agg_method):
+        if agg_method == "centraldist":
+            ids = []
+            central = {}
+            for id, (entity, events) in enumerate(ett_rel_set.items()):
+                if len(events) > 0:
+                    ids.append(id)
+                    central[entity] = np.mean(events, axis=0)
+            stacked_emb = torch.tensor(np.stack(central.values()), dtype=torch.float)
+            stacked_emb = stacked_emb / stacked_emb.norm(dim=1)[:, None]
+            stacked_emb = torch.matmul(stacked_emb, torch.t(stacked_emb))
+
+            sim_weight = torch.zeros(len(etts), len(etts))
+            rows = torch.zeros(len(ids), len(etts))
+            rows[:, ids] = stacked_emb
+            sim_weight[ids] = rows
+            return sim_weight
+
         stacked_emb = []
         ett_rel_id_set = {}
         for entity, events in ett_rel_set.items():
@@ -200,6 +220,24 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
                     else:
                         raise NotImplementedError()
         return torch.tensor(sim_weight)
+
+    @staticmethod
+    def init_clusters(ett_rel_set):
+        ids, central_emb = [], []
+        for id, (entity, events) in enumerate(ett_rel_set.items()):
+            if len(events) > 0:
+                ids.append(id)
+                central_emb.append(np.mean(events, axis=0))
+            
+        central_emb = np.stack(central_emb)
+        k_range = range(2, 20)
+        best_k, best_labels, results = chooseBestKforKMeansParallel(central_emb, k_range)
+        print(results)
+        print(f"Best K: {best_k}")
+        clusters = torch.tensor([-1] * len(ett_rel_set.keys()))
+        for id, label in zip(ids, best_labels):
+            clusters[id] = label
+        return best_k, clusters
 
     def init_sim_weight(self):
         if self.sim_method is not None:

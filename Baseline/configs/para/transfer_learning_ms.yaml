@@ -9,7 +9,7 @@ ADAPTER:
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
-    SIM_METHOD: concat-max
+    SIM_METHOD: concat-central
   TGT_DATASET: chemdner
   GRANULARITY: para
 
@@ -30,7 +30,8 @@ EVAL:
 
 LOSSES:
   NAME: CE_MS
-  LAMBDA: 0.1
+  LAMBDA_DISC: 0.2
+  LAMBDA_CLUS: 0
   MULTI_SIMILARITY_LOSS:
     SCALE_POS: 2.0
     SCALE_NEG: 5.0

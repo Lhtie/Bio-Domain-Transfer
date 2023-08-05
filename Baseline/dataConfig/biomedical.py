@@ -64,7 +64,7 @@ class biomedical(BaseDataConfig):
         
         if not overwrite and os.path.exists(cache_file):
             with open(cache_file, "rb") as file:
-                self.ett_rel_set, self.sim_weight = pickle.load(file)
+                self.ett_rel_set, self.sim_weight, self.K, self.clusters = pickle.load(file)
             self.etts = list(self.ett_rel_set.keys())
         else:
             self.ett_rel_set = {}
@@ -78,10 +78,13 @@ class biomedical(BaseDataConfig):
             if self.sim_method is not None:
                 self.sim_weight = BiomedicalBaseDataConfig.calc_sim_weight(
                                 self.etts, self.ett_rel_set, self.sim_method.split('-')[1])
+                self.K, self.clusters = BiomedicalBaseDataConfig.init_clusters(self.ett_rel_set)
             else:
                 self.sim_weight = torch.zeros(len(self.etts), len(self.etts))
+                self.K = 0
+                self.clusters = {key: 0 for key in range(len(self.etts))}
             with open(cache_file, "wb") as file:
-                pickle.dump((self.ett_rel_set, self.sim_weight), file)
+                pickle.dump((self.ett_rel_set, self.sim_weight, self.K, self.clusters), file)
             
         for dataset in self.datasets:
             dataset.etts = self.etts
