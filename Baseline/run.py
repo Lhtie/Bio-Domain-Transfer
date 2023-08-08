@@ -22,7 +22,13 @@ adapter_dir = "adapter/"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning_ms.yaml")
-    parser.add_argument("--method", type=str)
+    parser.add_argument("--method", type=str, default=None)
+    parser.add_argument("--datasets", type=str, default=None)
+    parser.add_argument("--vanilla", default=False, action="store_true")
+    parser.add_argument("--lambda_disc", type=float, default=None)
+    parser.add_argument("--lambda_clus", type=float, default=None)
+    parser.add_argument("--src_dataset", type=str, default=None)
+    parser.add_argument("--tgt_dataset", type=str, default=None)
     # parser.add_argument("--scale_pos", type=int)
     # parser.add_argument("--scale_neg", type=int)
     args = parser.parse_args()
@@ -65,16 +71,35 @@ if __name__ == "__main__":
     # cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
     # cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
     # cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
-    cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
-    cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.method}"
-    cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.method}"
-    cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.method}"
+    suffix = ""
+    if args.vanilla:
+        cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA = True
+        suffix += "/vanilla"
+    if args.method is not None:
+        cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
+        suffix += f"/{args.method}"
+    if args.datasets is not None:
+        cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
+        suffix += f"/{args.datasets}"
+    if args.lambda_disc is not None:
+        cfg.LOSSES.LAMBDA_DISC = args.lambda_disc
+    if args.lambda_clus is not None:
+        cfg.LOSSES.LAMBDA_CLUS = args.lambda_clus
+    if args.src_dataset is not None:
+        cfg.DATA.SRC_DATASET = args.src_dataset
+        suffix += f"/{args.src_dataset}"
+    if args.tgt_dataset is not None:
+        cfg.DATA.TGT_DATASET = args.tgt_dataset
+        suffix += f"/{args.tgt_dataset}"
+    cfg.OUTPUT.ADAPTER_SAVE_DIR += suffix
+    cfg.OUTPUT.HEAD_SAVE_DIR += suffix
+    cfg.OUTPUT.RESULT_SAVE_DIR += suffix
 
     # load model
     model_name = cfg.MODEL.PATH
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoAdapterModel.from_pretrained(model_name)
-    model, adapter_name, head_name = train_two_stage(cfg, model, tokenizer)
+    model, adapter_name, head_name, best_f1 = train_two_stage(cfg, model, tokenizer)
     if cfg.local_rank in [-1, 0]:
         os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
         os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
@@ -108,6 +133,8 @@ if __name__ == "__main__":
                 predictions.append([data.id2label[id.item()] for mask, id in zip(label_mask, pred) if mask == 1])
                 references.append([data.id2label[id.item()] for mask, id in zip(label_mask, ref) if mask == 1])
 
+        print(cfg.OUTPUT.RESULT_SAVE_DIR, args.lambda_disc, args.lambda_clus)
+        print(f"Best f1 on validation: {best_f1}")
         seqeval = evaluate.load('evaluate-metric/seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
         print(results)

@@ -7,18 +7,19 @@ from tqdm.auto import tqdm
 import numpy as np
 import pickle
 
-from utils.SapBERT import SapBERT
-from .base import BaseDataConfig
+from utils.entity_encoder import EntityEncoder
 from utils.kmeans import *
+from ..base import BaseDataConfig
 
 # Configuration
 eps = 1e-10
 sapbert_path = "/mnt/data/oss_beijing/liuhongyi/models/SapBERT-from-PubMedBERT-fulltext"
 sentbert_path = "/mnt/data/oss_beijing/liuhongyi/models/S-PubMedBert-MS-MARCO-SCIFACT"
+bert_path = "/mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased"
 
 from sentence_transformers import SentenceTransformer, util
-# sent_model = SentenceTransformer('all-MiniLM-L6-v2')
-sent_model = SentenceTransformer(sentbert_path)
+sent_model = SentenceTransformer('all-MiniLM-L6-v2')
+# sent_model = SentenceTransformer(sentbert_path)
 
 class Event:
     arguments = ["Theme", "Cause", "Product", "Site"]
@@ -126,7 +127,7 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
 
         if not overwrite and os.path.exists(cache_file):
             with open(cache_file, "rb") as file:
-                self.ett_rel_set, self.annotations, self.texts, self.sim_weight = pickle.load(file)
+                self.ett_rel_set, self.annotations, self.texts, self.sim_weight, self.K, self.clusters = pickle.load(file)
             self.etts = list(self.ett_rel_set.keys())
         else:
             self.ett_rel_set, self.id2event = {}, {}
@@ -134,7 +135,7 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
             self.etts = list(self.ett_rel_set.keys())
             self.init_sim_weight()
             with open(cache_file, "wb") as file:
-                pickle.dump((self.ett_rel_set, self.annotations, self.texts, self.sim_weight), file)
+                pickle.dump((self.ett_rel_set, self.annotations, self.texts, self.sim_weight, self.K, self.clusters), file)
 
     @abstractmethod
     def load_raw_data(self):
@@ -149,7 +150,7 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
             for _, event in self.id2event.items():
                     entities.update(event.get_entities())
             print(f"Totally {len(entities)} entities to embed")
-            model = SapBERT(sapbert_path, cache_dir=self.cache_dir)
+            model = EntityEncoder(sapbert_path, cache_dir=self.cache_dir)
             embs = model.get_embedding(entities)
             embs_stacked = np.stack(embs.values())
             mean = embs_stacked.mean(axis=0)
@@ -174,6 +175,8 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
     
     @staticmethod
     def calc_sim_weight(etts, ett_rel_set, agg_method):
+        if agg_method == "clus":
+            return torch.zeros(len(etts), len(etts))
         if agg_method == "centraldist":
             ids = []
             central = {}
@@ -244,8 +247,11 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
             self.init_embeddings()
             self.sim_weight = BiomedicalBaseDataConfig.calc_sim_weight(
                             self.etts, self.ett_rel_set, self.agg_method)
+            self.K, self.clusters = BiomedicalBaseDataConfig.init_clusters(self.ett_rel_set)
         else:
             self.sim_weight = torch.zeros(len(self.etts), len(self.etts))
+            self.K = 0
+            self.clusters = {key: 0 for key in range(len(self.etts))}
         
     def add_relation(self, ett, rel):
         if not ett in self.ett_rel_set:

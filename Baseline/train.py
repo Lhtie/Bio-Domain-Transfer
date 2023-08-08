@@ -22,8 +22,10 @@ def get_dataloaders(cfg, tokenizer, is_src):
         torch.distributed.barrier()
     if is_src:
         data = get_src_dataset(cfg)
+        cfg.data = data
     else:
         data = get_tgt_dataset(cfg)
+        cfg.data = data
     dataset = data.load(tokenizer)
     if cfg.local_rank == 0:
         print(dataset)
@@ -55,8 +57,8 @@ def train_single(cfg, model, tokenizer):
 
     # train
     cfg.TRAIN.EPOCHS = cfg.TRAIN.TGT_EPOCHS
-    model = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
-    return model, adapter_name, head_name
+    model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    return model, adapter_name, head_name, best_f1
 
 def train_two_stage(cfg, model, tokenizer):
     # load data
@@ -75,9 +77,9 @@ def train_two_stage(cfg, model, tokenizer):
     # train 4 src
     cfg.TRAIN.EPOCHS = cfg.TRAIN.SRC_EPOCHS
     if cfg.LOSSES.NAME == "CE_MS":
-        model = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True)
+        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True)
     elif cfg.LOSSES.NAME == "CrossEntropy":
-        model = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, pretrain=True)
+        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, pretrain=True)
     else:
         raise NotImplemented
     if cfg.local_rank in [-1, 0]:
@@ -99,8 +101,8 @@ def train_two_stage(cfg, model, tokenizer):
 
     # train 4 tgt
     cfg.TRAIN.EPOCHS = cfg.TRAIN.TGT_EPOCHS
-    model = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
-    return model, adapter_name, head_name
+    model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    return model, adapter_name, head_name, best_f1
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -146,9 +148,9 @@ if __name__ == "__main__":
     model = AutoAdapterModel.from_pretrained(model_name)
 
     if not cfg.TRAIN.TWO_STAGE:
-        model, adapter_name, head_name = train_single(cfg, model, tokenizer)
+        model, adapter_name, head_name, best_f1 = train_single(cfg, model, tokenizer)
     else:
-        model, adapter_name, head_name = train_two_stage(cfg, model, tokenizer)
+        model, adapter_name, head_name, best_f1 = train_two_stage(cfg, model, tokenizer)
 
     if cfg.local_rank in [-1, 0]:
         os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)

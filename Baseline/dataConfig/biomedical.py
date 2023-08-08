@@ -9,19 +9,15 @@ from tqdm import tqdm
 from datasets import load_dataset, Dataset, DatasetDict
 
 from .base import BaseDataConfig
-from .biomedical_base import BiomedicalBaseDataConfig
-from .pc import pc
-from .cg import cg
-from .id import id
-from .bc5cdr import bc5cdr
-from .drugprot import drugprot
+from .bioNLP.biomedical_base import BiomedicalBaseDataConfig
+from .bioNLP.pc import pc
+from .bioNLP.cg import cg
+from .bioNLP.id import id
 
 datasets = {
     "pc": pc,
     "cg": cg,
-    "id": id,
-    # "bc5cdr": bc5cdr,
-    # "drugprot": drugprot
+    "id": id
 }
 
 class biomedical(BaseDataConfig):
@@ -35,6 +31,8 @@ class biomedical(BaseDataConfig):
                 self.dataset_names = cfg.DATA.BIOMEDICAL.DATASETS
             if hasattr(cfg.DATA.BIOMEDICAL, "SIM_METHOD"):
                 self.sim_method = cfg.DATA.BIOMEDICAL.SIM_METHOD
+                if self.sim_method == "None":
+                    self.sim_method = None
 
         for key, val in datasets.items():
             if key in self.dataset_names:

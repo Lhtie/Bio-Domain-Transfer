@@ -11,7 +11,7 @@ from datasets import load_dataset, Dataset, DatasetDict
 from .biomedical_base import BiomedicalBaseDataConfig, Event
 
 data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/bionlp-st-2011-id/original-data"
-emb_tp_path = "dataConfig/embedding_templates/id_tp.json"
+emb_tp_path = "dataConfig/bioNLP/embedding_templates/id_tp.json"
 split_dir = {
     "training": "train", 
     "development": "devel", 

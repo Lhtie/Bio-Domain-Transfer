@@ -6,4 +6,5 @@ Baseline/.cache
 Baseline/adapter
 Baseline/head
 Baseline/results
-Baseline/analysis
+Baseline/analysis/
+Baseline/*.txt

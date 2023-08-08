@@ -10,29 +10,43 @@ from datasets import load_dataset, Dataset, DatasetDict
 
 from .biomedical_base import BiomedicalBaseDataConfig, Event
 
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/BioNLP-ST_2013_PC"
-emb_tp_path = "dataConfig/embedding_templates/pc_tp.json"
+data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/bionlp-st-2013-cg/original-data"
+emb_tp_path = "dataConfig/bioNLP/embedding_templates/cg_tp.json"
 split_dir = {
-    "training": "BioNLP-ST_2013_PC_training_data", 
-    "development": "BioNLP-ST_2013_PC_development_data", 
-    "evaluation": "BioNLP-ST_2013_PC_test_data"
+    "training": "train", 
+    "development": "devel",
+    "evaluation": "test"
 }
 
-class pc(BiomedicalBaseDataConfig):
+class cg(BiomedicalBaseDataConfig):
     def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, sim_method=None):
-        super().__init__("PathwayCuration", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
+        super().__init__("CancerGenetics", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
 
         self.labels = [ 
-            "O", "B-Simple_chemical", "I-Simple_chemical", "B-Gene_or_gene_product", "I-Gene_or_gene_product", "B-Complex", "I-Complex", "B-Cellular_component", "I-Cellular_component"
+            'O', 'B-Simple_chemical', 'I-Simple_chemical', 'B-Organism', 'I-Organism', 'B-Organism_subdivision', 'I-Organism_subdivision', 'B-Anatomical_system', 'I-Anatomical_system', 'B-Organ', 'I-Organ', 'B-Multi-tissue_structure', 'I-Multi-tissue_structure', 'B-Tissue', 'I-Tissue', 'B-Developing_anatomical_structure', 'I-Developing_anatomical_structure', 'B-Cell', 'I-Cell', 'B-Cellular component', 'I-Cellular component', 'B-Organism_substance', 'I-Organism_substance', 'B-Immaterial_anatomical_entity', 'I-Immaterial_anatomical_entity', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Protein_domain_or_region', 'I-Protein_domain_or_region', 'B-Amino_acid', 'I-Amino_acid', 'B-DNA_domain_or_region', 'I-DNA_domain_or_region', 'B-Pathological_formation', 'I-Pathological_formation', 'B-Cancer', 'I-Cancer'
         ]
         self.id2label = {id_: label for id_, label in enumerate(self.labels)}
         self.label2id = {label: id_ for id_, label in enumerate(self.labels)}
         self.label_ids = {
             "NO CLASS": 0,
             "Simple_chemical": 1,
-            "Gene_or_gene_product": 3,
-            "Complex": 5,
-            "Cellular_component": 7
+            "Organism": 3,
+            "Organism_subdivision": 5,
+            "Anatomical_system": 7,
+            "Organ": 9,
+            "Multi-tissue_structure": 11,
+            "Tissue": 13,
+            "Developing_anatomical_structure": 15,
+            "Cell": 17,
+            "Cellular_component": 19,
+            "Organism_substance": 21,
+            "Immaterial_anatomical_entity": 23,
+            "Gene_or_gene_product": 25,
+            "Protein_domain_or_region": 27,
+            "Amino_acid": 29,
+            "DNA_domain_or_region": 31,
+            "Pathological_formation": 33,
+            "Cancer": 35
         }
 
     def convert(self, key):
@@ -137,7 +151,7 @@ class pc(BiomedicalBaseDataConfig):
             self.emb_tp = json.load(f)
         for split, s_dir in split_dir.items():
             self.read_from_file(os.path.join(data_dir, s_dir), split)
-
+    
     def load_dataset(self, tokenizer=None):
         dataset = DatasetDict()
         for split in ['training', 'development', 'evaluation']:

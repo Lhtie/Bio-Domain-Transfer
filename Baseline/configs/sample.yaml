@@ -7,10 +7,8 @@ ADAPTER:
   EVAL: biomedical_ner_bert-base-uncased_2stage
 
 DATA:
-  SRC_DATASET: biomedical
-  BIOMEDICAL:
-    SIM_METHOD: concat-centraldist
-  TGT_DATASET: chemdner
+  SRC_DATASET: politics
+  TGT_DATASET: music
   GRANULARITY: para
 
 TRAIN:
@@ -36,6 +34,7 @@ LOSSES:
     SCALE_NEG: 5.0
     SCALE_POS_WEIGHT: 6.0
     SCALE_NEG_WEIGHT: 10.0
+    VANILLA: True
 
 OUTPUT:
   ADAPTER_SAVE_DIR: adapter/para/ms

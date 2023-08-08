@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
-class SapBERT:
+class EntityEncoder:
     def __init__(
         self, 
         model_path="cambridgeltl/SapBERT-from-PubMedBERT-fulltext", 
@@ -20,7 +20,7 @@ class SapBERT:
         self.batch_size = batch_size
         self.lock = torch.multiprocessing.Lock()
         self.cache_dir = cache_dir
-        self.cache_file = os.path.join(self.cache_dir, "cached_embs.pt")
+        self.cache_file = os.path.join(self.cache_dir, f"{model_path.split('/')[-1]}-cached_embs.pt")
         os.makedirs(cache_dir, exist_ok=True)
 
         if dist.is_initialized():

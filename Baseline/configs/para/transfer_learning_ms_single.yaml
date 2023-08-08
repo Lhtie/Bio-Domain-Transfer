@@ -9,12 +9,12 @@ ADAPTER:
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
-    - id
+    SIM_METHOD: None
   TGT_DATASET: chemdner
   GRANULARITY: para
 
 TRAIN:
-  SRC_EPOCHS: 100
+  SRC_EPOCHS: 120
   TGT_EPOCHS: 80
   SRC_BATCH_SIZE: 64
   BATCH_SIZE: 16
@@ -30,15 +30,16 @@ EVAL:
 
 LOSSES:
   NAME: CE_MS
-  LAMBDA: 0.1
+  LAMBDA_DISC: 0.05
+  LAMBDA_CLUS: 0.4
   MULTI_SIMILARITY_LOSS:
     SCALE_POS: 2.0
     SCALE_NEG: 5.0
     SCALE_POS_WEIGHT: 6.0
     SCALE_NEG_WEIGHT: 10.0
-    VANILA: False
+    VANILA: False 
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/ms/id
-  HEAD_SAVE_DIR: head/para/ms/id
-  RESULT_SAVE_DIR: results/para/ms/id
+  ADAPTER_SAVE_DIR: adapter/para/ms
+  HEAD_SAVE_DIR: head/para/ms
+  RESULT_SAVE_DIR: results/para/ms

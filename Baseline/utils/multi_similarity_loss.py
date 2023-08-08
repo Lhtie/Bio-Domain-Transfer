@@ -23,7 +23,7 @@ class MultiSimilarityLoss(nn.Module):
         self.pos_pair_w = []
         self.neg_pair_w = []
 
-    def forward(self, feats, labels, sim_weight):
+    def forward(self, feats, labels, sim_weight=None):
         assert feats.size(0) == labels.size(0), \
             f"feats.size(0): {feats.size(0)} is not equal to labels.size(0): {labels.size(0)}"
         batch_size = feats.size(0)
@@ -34,21 +34,25 @@ class MultiSimilarityLoss(nn.Module):
         loss = list()
 
         for i in range(batch_size):
-            pos_pair_w = sim_weight[i][labels == labels[i]]
+            if not self.vanilla:
+                pos_pair_w = sim_weight[i][labels == labels[i]]
             pos_pair_ = sim_mat[i][labels == labels[i]]
             # pos_pair_w = pos_pair_w[pos_pair_ < 1 - epsilon]
             # pos_pair_ = pos_pair_[pos_pair_ < 1 - epsilon]
 
-            neg_pair_w = sim_weight[i][labels != labels[i]]
+            if not self.vanilla:
+                neg_pair_w = sim_weight[i][labels != labels[i]]
             neg_pair_ = sim_mat[i][labels != labels[i]]
 
             if len(pos_pair_) > 0:
-                neg_pair_w = neg_pair_w[neg_pair_ + self.margin > min(pos_pair_)]
+                if not self.vanilla:
+                    neg_pair_w = neg_pair_w[neg_pair_ + self.margin > min(pos_pair_)]
                 neg_pair = neg_pair_[neg_pair_ + self.margin > min(pos_pair_)]
             else:
                 neg_pair = neg_pair_
             if len(neg_pair_) > 0:
-                pos_pair_w = pos_pair_w[pos_pair_ - self.margin < max(neg_pair_)]
+                if not self.vanilla:
+                    pos_pair_w = pos_pair_w[pos_pair_ - self.margin < max(neg_pair_)]
                 pos_pair = pos_pair_[pos_pair_ - self.margin < max(neg_pair_)]
             else:
                 pos_pair = pos_pair_
@@ -70,8 +74,9 @@ class MultiSimilarityLoss(nn.Module):
 
             self.pos_pair_thresh.append(pos_pair - self.thresh)
             self.neg_pair_thresh.append(neg_pair - self.thresh)
-            self.pos_pair_w.append(pos_pair_w)
-            self.neg_pair_w.append(neg_pair_w)
+            if not self.vanilla:
+                self.pos_pair_w.append(pos_pair_w)
+                self.neg_pair_w.append(neg_pair_w)
             loss.append(pos_loss + neg_loss)
 
         if len(loss) == 0:
@@ -97,7 +102,7 @@ class Feats:
         else:
             return torch.stack(self.ids), torch.stack(self.feats), torch.stack(self.labels)
 
-def extract_feat(batched_feat, batched_label_mask, batched_token_id, batched_token_label, K, clusters):
+def extract_feat(batched_feat, batched_label_mask, batched_token_id, batched_token_label, overlap_labels, K=None, clusters=None):
     feat_disc, feat_clus = Feats(), Feats()
     for feat, label_mask, token_id, token_label in zip(batched_feat, batched_label_mask, batched_token_id, batched_token_label):
         token_feat = []
@@ -113,20 +118,22 @@ def extract_feat(batched_feat, batched_label_mask, batched_token_id, batched_tok
             if label > 0 and id != -1: # part of entity
                 if label % 2 == 1: # start of an entity
                     feat_disc.push(ett_feat_disc)
-                    if ett_feat_clus[2] != -1:
+                    if K is not None and ett_feat_clus[2] != -1:
                         feat_clus.push(ett_feat_clus)
 
-                    is_chem = label == 1 or label == 2
+                    is_chem = torch.tensor(label in overlap_labels)
                     ett_feat_disc = (id, [feat], is_chem)
-                    clus = clusters[id.item()]
-                    if clus != -1 and is_chem:
-                        clus += K # clusters diff between chem & non-chem
-                    ett_feat_clus = (id, [feat], clus)
+                    if K is not None:
+                        clus = clusters[id.item()]
+                        if clus != -1 and is_chem:
+                            clus += K # clusters diff between chem & non-chem
+                        ett_feat_clus = (id, [feat], clus)
                 else:
                     ett_feat_disc[1].append(feat)
-                    ett_feat_clus[1].append(feat)
+                    if K is not None:
+                        ett_feat_clus[1].append(feat)
         feat_disc.push(ett_feat_disc)
-        if ett_feat_clus[2] != -1:
+        if K is not None and ett_feat_clus[2] != -1:
             feat_clus.push(ett_feat_clus)
     return feat_disc, feat_clus
 
