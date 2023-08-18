@@ -1,10 +1,11 @@
 import os
 import numpy as np
 import pickle
+import json
 import torch
 import datasets
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoAdapterModel
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
@@ -13,14 +14,26 @@ class EntityEncoder:
         self, 
         model_path="cambridgeltl/SapBERT-from-PubMedBERT-fulltext", 
         batch_size=128, 
-        cache_dir=".cache/"
+        cache_dir=".cache/",
+        adapter_path=None
     ):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)  
-        self.model = AutoModel.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        if adapter_path is not None:
+            self.model = AutoAdapterModel.from_pretrained(model_path)
+            self.model.load_adapter(adapter_path)
+            with open(os.path.join(adapter_path, "adapter_config.json"), "r") as f:
+                config = json.load(f)
+            self.model.set_active_adapters([config["name"]])
+        else:
+            self.model = AutoModel.from_pretrained(model_path)
         self.batch_size = batch_size
         self.lock = torch.multiprocessing.Lock()
         self.cache_dir = cache_dir
-        self.cache_file = os.path.join(self.cache_dir, f"{model_path.split('/')[-1]}-cached_embs.pt")
+        file_name = model_path.split('/')[-1]
+        if adapter_path is not None:
+            file_name += f"-{adapter_path.split('/')[-1]}"
+        file_name += "-cached_embs.pt"
+        self.cache_file = os.path.join(self.cache_dir, file_name)
         os.makedirs(cache_dir, exist_ok=True)
 
         if dist.is_initialized():

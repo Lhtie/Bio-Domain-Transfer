@@ -6,7 +6,8 @@ import datasets
 import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset, Dataset, DatasetDict
-from .biomedical_base import BiomedicalBaseDataConfig
+
+from .bioNLP.biomedical_base import BiomedicalBaseDataConfig
 
 data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/BioCreative-V-CDR-Corpus/CDR_Data/CDR_Data/CDR.Corpus.v010516"
 split_dir = {

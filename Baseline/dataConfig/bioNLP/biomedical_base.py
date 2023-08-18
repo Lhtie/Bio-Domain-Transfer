@@ -122,20 +122,20 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
         if self.sim_method is not None:
             self.emb_method, self.agg_method = self.sim_method.split('-')
 
-        cache_file = os.path.join(cache_dir, f"{ds_name}_{tokenizer_name}_{sim_method}_raw.pt")
+        cache_file = os.path.join(cache_dir, f"{ds_name}_{tokenizer_name}_{self.emb_method}_raw.pt")
         os.makedirs(cache_dir, exist_ok=True)
 
         if not overwrite and os.path.exists(cache_file):
             with open(cache_file, "rb") as file:
-                self.ett_rel_set, self.annotations, self.texts, self.sim_weight, self.K, self.clusters = pickle.load(file)
+                self.ett_rel_set, self.annotations, self.texts = pickle.load(file)
             self.etts = list(self.ett_rel_set.keys())
         else:
             self.ett_rel_set, self.id2event = {}, {}
             self.load_raw_data()
+            self.init_embeddings()
             self.etts = list(self.ett_rel_set.keys())
-            self.init_sim_weight()
             with open(cache_file, "wb") as file:
-                pickle.dump((self.ett_rel_set, self.annotations, self.texts, self.sim_weight, self.K, self.clusters), file)
+                pickle.dump((self.ett_rel_set, self.annotations, self.texts), file)
 
     @abstractmethod
     def load_raw_data(self):
@@ -170,6 +170,13 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
             embs = sent_model.encode(sents)
             for entity, events in self.ett_rel_set.items():
                 self.ett_rel_set[entity] = [embs[sents.index(e)] for e in events]
+        elif self.emb_method == "entityEnc":
+            model = EntityEncoder(sapbert_path, cache_dir=self.cache_dir)
+            entities = list(self.ett_rel_set.keys())
+            print(f"Totally {len(entities)} entities to embed")
+            embs = model.get_embedding(entities)
+            for entity, _ in self.ett_rel_set.items():
+                self.ett_rel_set[entity] = [embs[entity]]
         else:
             raise NotImplementedError()
     
@@ -241,17 +248,6 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
         for id, label in zip(ids, best_labels):
             clusters[id] = label
         return best_k, clusters
-
-    def init_sim_weight(self):
-        if self.sim_method is not None:
-            self.init_embeddings()
-            self.sim_weight = BiomedicalBaseDataConfig.calc_sim_weight(
-                            self.etts, self.ett_rel_set, self.agg_method)
-            self.K, self.clusters = BiomedicalBaseDataConfig.init_clusters(self.ett_rel_set)
-        else:
-            self.sim_weight = torch.zeros(len(self.etts), len(self.etts))
-            self.K = 0
-            self.clusters = {key: 0 for key in range(len(self.etts))}
         
     def add_relation(self, ett, rel):
         if not ett in self.ett_rel_set:

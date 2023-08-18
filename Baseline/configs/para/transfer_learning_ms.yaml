@@ -37,7 +37,7 @@ LOSSES:
     SCALE_NEG: 5.0
     SCALE_POS_WEIGHT: 6.0
     SCALE_NEG_WEIGHT: 10.0
-    VANILA: False
+    VANILLA: False
 
 OUTPUT:
   ADAPTER_SAVE_DIR: adapter/para/ms

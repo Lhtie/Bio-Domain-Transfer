@@ -25,7 +25,7 @@ def get_dataset(cfg, type):
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
     elif type in ["politics", "science", "music", "literature", "ai"]:
-        data = globals()[type](cfg.MODEL.BACKBONE)
+        data = globals()[type](cfg, cfg.MODEL.BACKBONE)
     else:
         raise NotImplementedError(f"dataset {cfg.DATA.SRC_DATASET} is not supported")
     return data

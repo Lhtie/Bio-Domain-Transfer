@@ -13,7 +13,7 @@ import numpy as np
 import logging
 import evaluate
 
-from train import train_two_stage
+from train import train_two_stage, train_single
 from utils.trainer import get
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
 
@@ -29,8 +29,8 @@ if __name__ == "__main__":
     parser.add_argument("--lambda_clus", type=float, default=None)
     parser.add_argument("--src_dataset", type=str, default=None)
     parser.add_argument("--tgt_dataset", type=str, default=None)
-    # parser.add_argument("--scale_pos", type=int)
-    # parser.add_argument("--scale_neg", type=int)
+    parser.add_argument("--scale_pos_w", type=float, default=None)
+    parser.add_argument("--scale_neg_w", type=float, default=None)
     args = parser.parse_args()
 
     cfg = read_config(args.cfg_file)
@@ -66,17 +66,15 @@ if __name__ == "__main__":
     cfg.logger = logger
     cfg.logger.info(args)
 
-    # cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos
-    # cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg
-    # cfg.OUTPUT.ADAPTER_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
-    # cfg.OUTPUT.HEAD_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
-    # cfg.OUTPUT.RESULT_SAVE_DIR += f"/{args.scale_pos}_{args.scale_neg}"
     suffix = ""
     if args.vanilla:
         cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA = True
         suffix += "/vanilla"
     if args.method is not None:
-        cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
+        if hasattr(cfg.DATA, "BIOMEDICAL"):
+            cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
+        if hasattr(cfg.DATA, "CROSSNER"):
+            cfg.DATA.CROSSNER.SIM_METHOD = args.method
         suffix += f"/{args.method}"
     if args.datasets is not None:
         cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
@@ -91,6 +89,10 @@ if __name__ == "__main__":
     if args.tgt_dataset is not None:
         cfg.DATA.TGT_DATASET = args.tgt_dataset
         suffix += f"/{args.tgt_dataset}"
+    if args.scale_pos_w is not None:
+        cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos_w
+    if args.scale_neg_w is not None:
+        cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
     cfg.OUTPUT.ADAPTER_SAVE_DIR += suffix
     cfg.OUTPUT.HEAD_SAVE_DIR += suffix
     cfg.OUTPUT.RESULT_SAVE_DIR += suffix
@@ -99,7 +101,10 @@ if __name__ == "__main__":
     model_name = cfg.MODEL.PATH
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoAdapterModel.from_pretrained(model_name)
-    model, adapter_name, head_name, best_f1 = train_two_stage(cfg, model, tokenizer)
+    if not cfg.TRAIN.TWO_STAGE:
+        model, adapter_name, head_name, best_f1 = train_single(cfg, model, tokenizer)
+    else:
+        model, adapter_name, head_name, best_f1 = train_two_stage(cfg, model, tokenizer)
     if cfg.local_rank in [-1, 0]:
         os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
         os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
@@ -133,7 +138,11 @@ if __name__ == "__main__":
                 predictions.append([data.id2label[id.item()] for mask, id in zip(label_mask, pred) if mask == 1])
                 references.append([data.id2label[id.item()] for mask, id in zip(label_mask, ref) if mask == 1])
 
-        print(cfg.OUTPUT.RESULT_SAVE_DIR, args.lambda_disc, args.lambda_clus)
+        print(cfg.OUTPUT.RESULT_SAVE_DIR)
+        if cfg.LOSSES.NAME == "CE_MS":
+            print("Lambda:", cfg.LOSSES.LAMBDA_DISC, cfg.LOSSES.LAMBDA_CLUS)
+        if args.scale_pos_w is not None or args.scale_neg_w is not None:
+            print("MS Scale Weight:", args.scale_pos_w, args.scale_neg_w)
         print(f"Best f1 on validation: {best_f1}")
         seqeval = evaluate.load('evaluate-metric/seqeval')
         results = seqeval.compute(predictions=predictions, references=references)

@@ -8,6 +8,8 @@ ADAPTER:
 
 DATA:
   SRC_DATASET: politics
+  CROSSNER:
+    SIM_METHOD: None
   TGT_DATASET: music
   GRANULARITY: para
 
@@ -27,16 +29,16 @@ EVAL:
 
 LOSSES:
   NAME: CE_MS
-  LAMBDA_DISC: 0.1
-  LAMBDA_CLUS: 0.4
+  LAMBDA_DISC: 0.05
+  LAMBDA_CLUS: 0.8
   MULTI_SIMILARITY_LOSS:
     SCALE_POS: 2.0
-    SCALE_NEG: 5.0
+    SCALE_NEG: 2.0
     SCALE_POS_WEIGHT: 6.0
-    SCALE_NEG_WEIGHT: 10.0
-    VANILA: True
+    SCALE_NEG_WEIGHT: 6.0
+    VANILLA: False
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para
-  HEAD_SAVE_DIR: head/para
-  RESULT_SAVE_DIR: results/para
+  ADAPTER_SAVE_DIR: adapter/para/ms
+  HEAD_SAVE_DIR: head/para/ms
+  RESULT_SAVE_DIR: results/para/ms

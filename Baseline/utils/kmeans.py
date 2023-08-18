@@ -50,5 +50,5 @@ def chooseBestKforKMeansParallel(scaled_data, k_range):
     scaled_inertia = list(zip(k_range, [x[0] for x in ans]))
     results = pd.DataFrame(scaled_inertia, columns = ['k','Scaled Inertia']).set_index('k')
     best_k = results.idxmin()[0]
-    best_labels = ans[best_k][1]
+    best_labels = ans[best_k-k_range[0]][1]
     return best_k, best_labels, results

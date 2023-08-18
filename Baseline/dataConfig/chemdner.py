@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import os
+import pickle
 import datasets
 import numpy as np
 from tqdm import tqdm
@@ -17,6 +18,7 @@ class chemdner(BaseDataConfig):
         if oracle:
             dataset_name += "_oracle"
         super().__init__(dataset_name, tokenizer_name, granularity, cache_dir, overwrite)
+        self.oracle = oracle
 
         self.labels = [ 
             "O", "B-ABBREVIATION", "I-ABBREVIATION", "B-IDENTIFIER", "I-IDENTIFIER", "B-FORMULA", "I-FORMULA", "B-SYSTEMATIC", "I-SYSTEMATIC", "B-MULTIPLE", "I-MULTIPLE", "B-TRIVIAL", "I-TRIVIAL", "B-FAMILY", "I-FAMILY"
@@ -33,9 +35,18 @@ class chemdner(BaseDataConfig):
             "TRIVIAL": 11,
             "FAMILY": 13
         }
-        for split in ['training', 'development', 'evaluation']:
-            self.read_from_file(split)
-        self.oracle = oracle
+
+        self.raw_cache_file = os.path.join(cache_dir, f"{dataset_name}_{tokenizer_name}_raw.pt")
+        os.makedirs(cache_dir, exist_ok=True)
+
+        if not overwrite and os.path.exists(self.raw_cache_file):
+            with open(self.raw_cache_file, "rb") as file:
+                self.annotations, self.texts, self.etts = pickle.load(file)
+        else:
+            for split in ['training', 'development', 'evaluation']:
+                self.read_from_file(split)
+            with open(self.raw_cache_file, "wb") as file:
+                pickle.dump((self.annotations, self.texts, self.etts), file)
 
     def read_from_file(self, split):
         self.texts[split] = {}

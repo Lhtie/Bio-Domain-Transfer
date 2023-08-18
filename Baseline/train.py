@@ -84,7 +84,9 @@ def train_two_stage(cfg, model, tokenizer):
         raise NotImplemented
     if cfg.local_rank in [-1, 0]:
         os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), exist_ok=True)
+        os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name + "_inter"), exist_ok=True)
         get(cfg, model).save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), adapter_name)
+        get(cfg, model).save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name + "_inter"), head_name)
         cfg.logger.info("Best model for the 1st stage saved")
 
     # prepare for target
