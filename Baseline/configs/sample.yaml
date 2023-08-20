@@ -9,7 +9,7 @@ ADAPTER:
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
-    SIM_METHOD: concat-clus
+    SIM_METHOD: None
   TGT_DATASET: chemdner
   GRANULARITY: para
 

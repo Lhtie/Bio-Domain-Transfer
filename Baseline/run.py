@@ -78,24 +78,24 @@ if __name__ == "__main__":
         suffix += f"/{args.method}"
     if args.datasets is not None:
         cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
-        suffix += f"/{args.datasets}"
+    if args.src_dataset is not None:
+        cfg.DATA.SRC_DATASET = args.src_dataset
+    if args.tgt_dataset is not None:
+        cfg.DATA.TGT_DATASET = args.tgt_dataset
+
     if args.lambda_disc is not None:
         cfg.LOSSES.LAMBDA_DISC = args.lambda_disc
     if args.lambda_clus is not None:
         cfg.LOSSES.LAMBDA_CLUS = args.lambda_clus
-    if args.src_dataset is not None:
-        cfg.DATA.SRC_DATASET = args.src_dataset
-        suffix += f"/{args.src_dataset}"
-    if args.tgt_dataset is not None:
-        cfg.DATA.TGT_DATASET = args.tgt_dataset
-        suffix += f"/{args.tgt_dataset}"
     if args.scale_pos_w is not None:
         cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos_w
     if args.scale_neg_w is not None:
         cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
-    cfg.OUTPUT.ADAPTER_SAVE_DIR += suffix
-    cfg.OUTPUT.HEAD_SAVE_DIR += suffix
-    cfg.OUTPUT.RESULT_SAVE_DIR += suffix
+
+    suffix += f"/{cfg.DATA.SRC_DATASET}_{args.datasets}/{cfg.DATA.TGT_DATASET}"
+    cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix
+    cfg.OUTPUT.HEAD_SAVE_DIR = '/'.join(cfg.OUTPUT.HEAD_SAVE_DIR.split('/')[:-2]) + suffix
+    cfg.OUTPUT.RESULT_SAVE_DIR = '/'.join(cfg.OUTPUT.RESULT_SAVE_DIR.split('/')[:-2]) + suffix
 
     # load model
     model_name = cfg.MODEL.PATH

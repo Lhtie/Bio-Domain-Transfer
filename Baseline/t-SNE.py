@@ -17,8 +17,14 @@ from utils.multi_similarity_loss import extract_feat
 from utils.kmeans import *
 from utils.entity_encoder import EntityEncoder
 from dataConfig.chemdner_pse import chemdner_pse
+from dataConfig.biomedical import biomedical
 
 sapbert_path = "/mnt/data/oss_beijing/liuhongyi/models/SapBERT-from-PubMedBERT-fulltext"
+bert_path = "/mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased"
+adapter_path = {
+    "politics": "adapter/DAPT_Politics",
+    "science": "adapter/DAPT_Science"
+}
 
 def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     dataset = data.load(tokenizer)
@@ -60,6 +66,7 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
         with open(cache_file, "wb") as f:
             pickle.dump((ids, feats), f)
 
+    ### is_chem & clustering labels
     # id2ischem = {}
     # if is_src:
     #     for batch in Dataset.from_dict(dataset['training'][:50]):
@@ -71,7 +78,15 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     #         for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
     #             if tag > 0 and token_id != -1:
     #                 id2ischem[token_id] = tag < len(data.labels)
-    # model = EntityEncoder(sapbert_path, cache_dir=".cache/")
+    # src_data = get_src_dataset(cfg)
+    # tgt_data = get_tgt_dataset(cfg)
+    # overlap_labels = list(set(src_data.labels) & set(tgt_data.labels))
+    # for batch in Dataset.from_dict(dataset['training'][:50]):
+    #     for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
+    #         if tag > 0 and token_id != -1:
+    #             id2ischem[token_id] = data.labels[tag] in overlap_labels
+    # model = EntityEncoder(sapbert_path)
+    # model = EntityEncoder(bert_path, cache_dir=".cache/", adapter_path=adapter_path[data.ds_name.split("_")[0].lower()])
     # embs = model.get_embedding(data.etts)
     # central_emb = np.stack(embs.values())
     # k_range = range(2, 20)
@@ -79,7 +94,8 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     # print(results)
     # labels = []
     # for id in ids:
-    #     cluster = best_labels[list(embs.keys()).index(data.etts[id])]
+    #     # cluster = best_labels[list(embs.keys()).index(data.etts[id])]
+    #     # labels.append(cluster)
     #     if id2ischem[id]:
     #         # labels.append(f"Chemical-Group {cluster}")
     #         labels.append("Chemical")
@@ -87,17 +103,22 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     #         # labels.append(f"Non-Chemical-Group {cluster}")
     #         labels.append("Non-Chemical")
     
+    ### ner_tag labels
     id2tag = {}
-    for batch in Dataset.from_dict(dataset['training'][:50]):
+    for batch in dataset['training']:
         for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
             if tag > 0:
                 if tag < len(data.labels):
-                    id2tag[token_id] = data.labels[tag].split("-")[-1]
+                    id2tag[token_id.item()] = data.labels[tag].split("-")[-1]
                 else:
-                    id2tag[token_id] = "OOD"
+                    id2tag[token_id.item()] = "OOD"
     labels = []
     for id in ids:
         labels.append(id2tag[id])
+    # feats = []
+    # for id in ids:
+    #     feats.append(embs[data.etts[id]])
+    # feats = np.stack(feats)
 
     tsne = TSNE(n_components=2, verbose=1, random_state=42)
     z = tsne.fit_transform(feats)
@@ -106,9 +127,14 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     df["y"] = z[:,1]
     title=f"T-SNE projection of {data.ds_name.split('_')[0]} entities ({suffix})"
     plt.clf()
-    plt.figure(figsize=(8, 6))
+    # plt.figure(figsize=(8, 6))
+    color_palette = sns.color_palette("hls", len(set(labels)))
+    # if is_src:
+    #     color_palette = color_palette[:2]
+    # else:
+    #     color_palette = color_palette[2:]
     sns_plot = sns.scatterplot(x="x", y="y",  hue=labels,
-                palette=sns.color_palette("hls", len(set(labels))), data=df)
+                palette=color_palette, data=df)
     # indices = np.random.choice(range(len(ids)), 20)
     # for id, x, y in zip(ids[indices], df["x"][indices], df["y"][indices]):
     #     plt.annotate(data.etts[id], (x, y))
@@ -123,8 +149,10 @@ if __name__ == "__main__":
     cfg = read_config(args.cfg_file)
     cfg.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    src_data = get_src_dataset(cfg)
+    src_data = biomedical(cfg, cfg.MODEL.BACKBONE, retain_chem=True)
     tgt_data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
+    # src_data = get_src_dataset(cfg)
+    # tgt_data = get_tgt_dataset(cfg)
 
     model_path = cfg.MODEL.PATH
     adapter_name = cfg.ADAPTER.EVAL
@@ -134,15 +162,16 @@ if __name__ == "__main__":
     draw(cfg, model, tokenizer, src_data, 'BERT', True)
     draw(cfg, model, tokenizer, tgt_data, 'BERT', False)
 
+    cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/biomedical_None/chemdner"
     model = AutoAdapterModel.from_pretrained(model_path)
     model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
     model.set_active_adapters([adapter_name])
     draw(cfg, model, tokenizer, src_data, 'BERT+SRC', True)
     draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC', False)
 
-    cfg.OUTPUT.ADAPTER_SAVE_DIR += "/ms/concat-clus"
-    model = AutoAdapterModel.from_pretrained(model_path)
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    model.set_active_adapters([adapter_name])
-    draw(cfg, model, tokenizer, src_data, 'BERT+SRC (CLUS)', True)
-    draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (CLUS)', False)
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/ms/entityEnc-max/politics/music"
+    # model = AutoAdapterModel.from_pretrained(model_path)
+    # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
+    # model.set_active_adapters([adapter_name])
+    # draw(cfg, model, tokenizer, src_data, 'BERT+SRC (SW)', True)
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (SW)', False)

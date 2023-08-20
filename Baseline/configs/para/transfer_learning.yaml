@@ -31,6 +31,6 @@ LOSSES:
   NAME: CrossEntropy
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para
-  HEAD_SAVE_DIR: head/para
-  RESULT_SAVE_DIR: results/para
+  ADAPTER_SAVE_DIR: adapter/para/biomedical_None/chemdner
+  HEAD_SAVE_DIR: head/para/biomedical_None/chemdner
+  RESULT_SAVE_DIR: results/para/biomedical_None/chemdner

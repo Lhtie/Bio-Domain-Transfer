@@ -132,7 +132,8 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
         else:
             self.ett_rel_set, self.id2event = {}, {}
             self.load_raw_data()
-            self.init_embeddings()
+            if self.emb_method is not None:
+                self.init_embeddings()
             self.etts = list(self.ett_rel_set.keys())
             with open(cache_file, "wb") as file:
                 pickle.dump((self.ett_rel_set, self.annotations, self.texts), file)

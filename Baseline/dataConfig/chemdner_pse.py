@@ -24,6 +24,7 @@ class chemdner_pse(chemdner):
         self.cache_file += ".pse"
         self.raw_cache_file += ".pse"
         self.pseudo_label_file = os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "pseudo_label.json")
+        os.makedirs(cfg.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
 
         if overwrite or not os.path.exists(self.cache_file) or not os.path.exists(self.raw_cache_file):
             self.init_pseudo_label()
@@ -96,3 +97,17 @@ class chemdner_pse(chemdner):
             pickle.dump(dataset, file)
         with open(self.raw_cache_file, "wb") as file:
             pickle.dump((self.annotations, self.texts, self.etts), file)
+    
+    def report_bio_chem_portion(self):
+        with open(self.pseudo_label_file, "r") as f:
+            predictions = json.load(f)
+        dataset = self.load_dataset()
+        dataset['training'] = dataset['training'].add_column("pse_labels", predictions)
+        bio_in_chem, chem = 0, 0
+        for batch in dataset['training']:
+            for col, (token, token_id, tag, pse) in enumerate(zip(batch['tokens'], batch['token_id'], batch['ner_tags'], batch['pse_labels'])):
+                if tag > 0 and pse != "O":
+                    bio_in_chem += 1
+                if tag > 0:
+                    chem += 1
+        print(f"Pseudo Biomedical percentage in Chemicals: {bio_in_chem / chem}")

@@ -19,11 +19,14 @@ split_dir = {
 }
 
 class cg(BiomedicalBaseDataConfig):
-    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, sim_method=None):
+    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, sim_method=None):
+        if retain_chem:
+            cache_dir = os.path.join(cache_dir, "retain_chem")
+        self.retain_chem = retain_chem
         super().__init__("CancerGenetics", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
 
         self.labels = [ 
-            'O', 'B-Simple_chemical', 'I-Simple_chemical', 'B-Organism', 'I-Organism', 'B-Organism_subdivision', 'I-Organism_subdivision', 'B-Anatomical_system', 'I-Anatomical_system', 'B-Organ', 'I-Organ', 'B-Multi-tissue_structure', 'I-Multi-tissue_structure', 'B-Tissue', 'I-Tissue', 'B-Developing_anatomical_structure', 'I-Developing_anatomical_structure', 'B-Cell', 'I-Cell', 'B-Cellular component', 'I-Cellular component', 'B-Organism_substance', 'I-Organism_substance', 'B-Immaterial_anatomical_entity', 'I-Immaterial_anatomical_entity', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Protein_domain_or_region', 'I-Protein_domain_or_region', 'B-Amino_acid', 'I-Amino_acid', 'B-DNA_domain_or_region', 'I-DNA_domain_or_region', 'B-Pathological_formation', 'I-Pathological_formation', 'B-Cancer', 'I-Cancer'
+            'O', 'B-Simple_chemical', 'I-Simple_chemical', 'B-Organism', 'I-Organism', 'B-Organism_subdivision', 'I-Organism_subdivision', 'B-Anatomical_system', 'I-Anatomical_system', 'B-Organ', 'I-Organ', 'B-Multi-tissue_structure', 'I-Multi-tissue_structure', 'B-Tissue', 'I-Tissue', 'B-Developing_anatomical_structure', 'I-Developing_anatomical_structure', 'B-Cell', 'I-Cell', 'B-Cellular_component', 'I-Cellular_component', 'B-Organism_substance', 'I-Organism_substance', 'B-Immaterial_anatomical_entity', 'I-Immaterial_anatomical_entity', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Protein_domain_or_region', 'I-Protein_domain_or_region', 'B-Amino_acid', 'I-Amino_acid', 'B-DNA_domain_or_region', 'I-DNA_domain_or_region', 'B-Pathological_formation', 'I-Pathological_formation', 'B-Cancer', 'I-Cancer'
         ]
         self.id2label = {id_: label for id_, label in enumerate(self.labels)}
         self.label2id = {label: id_ for id_, label in enumerate(self.labels)}
@@ -76,8 +79,9 @@ class cg(BiomedicalBaseDataConfig):
         for line in lines:
             if line.startswith("*"):
                 t1, t2 = line.strip().split(' ')[-2:]
-                self.add_relation(id2entity[pmid+t1], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
-                self.add_relation(id2entity[pmid+t2], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
+                if pmid + t1 in id2entity and pmid + t2 in id2entity:
+                    self.add_relation(id2entity[pmid+t1], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
+                    self.add_relation(id2entity[pmid+t2], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
             if line.startswith("E"):
                 idx, ctx = line.strip().split('\t')
                 ctx = ctx.split(' ')
@@ -96,7 +100,10 @@ class cg(BiomedicalBaseDataConfig):
                     if self.emb_method == "concat" and role not in Event.arguments:
                         role = self.convert(role)
                     if ett.startswith("T"):
-                        ett = id2entity[pmid+ett]
+                        if pmid + ett in id2entity:
+                            ett = id2entity[pmid+ett]
+                        else:
+                            continue
                     elif ett.startswith("E"):
                         ett = "Nested_Event-" + pmid + ett
                     else:
@@ -130,6 +137,8 @@ class cg(BiomedicalBaseDataConfig):
                     for line in f.readlines():
                         idx, middle, entity = line.strip().split('\t')
                         label, start, end = middle.split(' ')
+                        if not self.retain_chem and label == "Simple_chemical": # filter out chemical entities
+                            continue
                         self.annotations[split][file[:-3]].append((
                             int(start), int(end), entity, label, entity.lower()
                         ))
