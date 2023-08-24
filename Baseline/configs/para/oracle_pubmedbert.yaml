@@ -22,7 +22,7 @@ EVAL:
   OVERWRITE: True
   BATCH_SIZE: 128
 
-LOSSES:
+TGT_LOSS:
   NAME: CrossEntropy
 
 OUTPUT:

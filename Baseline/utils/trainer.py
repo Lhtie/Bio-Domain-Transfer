@@ -12,30 +12,18 @@ from .multi_similarity_loss import extract_feat
 from .metric import *
 from .config import get_src_dataset, get_tgt_dataset
 
-def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=False, pretrain=False):
+def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, 
+            use_ms=False, pretrain=False, early_stop=True):
     ce_loss_fn = nn.CrossEntropyLoss(reduction='none')
     if use_ms:
         get(cfg, model).active_head = None
-        # determine whether use cluster
-        use_clus = cfg.data.sim_method is not None and cfg.data.sim_method.split('-')[1] == "clus"
-        if use_clus:
-            cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA = True
+        ms_loss_fn = MultiSimilarityLoss(cfg, "src" if pretrain else "tgt")
         # prepare sim weight matrix
-        if not cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA:
+        if pretrain and hasattr(cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS, "VANILLA") and \
+            not cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.VANILLA:
             sim_weight = cfg.data.sim_weight.to(cfg.device)
         else:
             sim_weight = None
-        # prepare overlap tags between src & tgt domain
-        src_data, tgt_data = get_src_dataset(cfg), get_tgt_dataset(cfg)
-        overlap_labels = list(set(src_data.labels) & set(tgt_data.labels))
-        if cfg.DATA.SRC_DATASET == "biomedical": # exception
-            overlap_labels = ["B-Chemical", "I-Chemical"]
-        overlap_labels = [cfg.data.label2id[label] for label in overlap_labels]
-        # get ms loss fn
-        ms_loss_fn = [
-            MultiSimilarityLoss(cfg),
-            MultiSimilarityLoss(cfg)
-        ]
         
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -51,7 +39,7 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
     optimizer = torch.optim.AdamW(params=optimizer_grouped_parameters, 
                                   lr=cfg.TRAIN.LR if not pretrain else cfg.TRAIN.SRC_LR)
 
-    best_f1, best_epoch, best_model = -1, -1, None
+    f1, best_f1, best_epoch, best_model = -1, -1, -1, None
     best_epoch = torch.tensor(best_epoch).to(cfg.device)
     epoch = 0
     pos_pair_thresh, neg_pair_thresh, pos_pair_w, neg_pair_w = [], [], [], []
@@ -60,38 +48,30 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
             cfg.logger.info(f"Epoch: {epoch}")
         # train
         model.train()
-        ce_losses, ms_disc_losses, ms_clus_losses, losses = [], [], [], []
-
         if use_ms:
-            ms_loss_fn[0].reset()
-            ms_loss_fn[1].reset()
+            ms_loss_fn.reset()
 
+        losses, ce_losses, ms_losses = [], [], []
         for i, batch in enumerate(train_dataloader):
             batch = {k: v.to(cfg.device) for k, v in batch.items()}
 
             outputs = model(batch["input_ids"])
             if use_ms:
-                feat_disc, feat_clus = extract_feat(
-                    outputs[0], 
+                feat_obj = extract_feat(
+                    outputs[0],
                     batched_label_mask=batch["label_mask"],
                     batched_token_id=batch['token_id'],
                     batched_token_label=batch['ner_tags'],
-                    overlap_labels=overlap_labels,
-                    K=cfg.data.K if use_clus else None,
-                    clusters=cfg.data.clusters if use_clus else None
+                    pseudo_labels=batch['pse_tags'] if not pretrain else None
+                    # cluster_map=cfg.data.clusters if pretrain else None
                 )
-                ids, feats, labels = feat_disc.tensorize()
-                ms_disc_loss = ms_loss_fn[0](
-                    feats,
+                ids, feats, labels = feat_obj.tensorize()
+                ms_loss = ms_loss_fn(
+                    feats, 
                     labels,
-                    sim_weight=sim_weight[ids][:, ids] if sim_weight is not None else None
+                    sim_weight=sim_weight[ids][:, ids] \
+                        if sim_weight is not None else None
                 )
-                if use_clus:
-                    ids, feats, labels = feat_clus.tensorize()
-                    ms_clus_loss = ms_loss_fn[1](
-                        feats,
-                        labels
-                    )
                 outputs = get(cfg, model).forward_head(
                     (outputs[0],) + outputs[2:],
                     head_name=head_name,
@@ -107,11 +87,11 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
             ce_loss = (ce_loss_fn(predictions, expected) * label_mask).mean()
             
             if use_ms:
-                loss = ce_loss + cfg.LOSSES.LAMBDA_DISC * ms_disc_loss
-                ms_disc_losses.append(ms_disc_loss.item())
-                if use_clus:
-                    loss += cfg.LOSSES.LAMBDA_CLUS * ms_clus_loss
-                    ms_clus_losses.append(ms_clus_loss.item())
+                if pretrain:
+                    loss = ce_loss + cfg.SRC_LOSS.LAMBDA * ms_loss
+                else:
+                    loss = ce_loss + cfg.TGT_LOSS.LAMBDA * ms_loss
+                ms_losses.append(ms_loss.item())
             else:
                 loss = ce_loss
             ce_losses.append(ce_loss.item())
@@ -123,27 +103,24 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
         if cfg.local_rank in [-1, 0]:
             if use_ms:
                 cfg.logger.info(f"loss: {np.mean(losses)}")
-                cfg.logger.info(f"ce:{np.mean(ce_losses)}")
-                cfg.logger.info(f"ms_disc:{np.mean(ms_disc_losses)}")
-                if use_clus:
-                    cfg.logger.info(f"ms_clus:{np.mean(ms_clus_losses)}")
+                cfg.logger.info(f"ce: {np.mean(ce_losses)}; ms: {np.mean(ms_losses)}")
             else:
                 cfg.logger.info(f"loss: {np.mean(losses)}")
 
-        if epoch % 10 == 0 and use_ms:
-            pos_pair_thresh.append(torch.concat(ms_loss_fn[0].pos_pair_thresh).cpu().detach())
-            neg_pair_thresh.append(torch.concat(ms_loss_fn[0].neg_pair_thresh).cpu().detach())
-            if not ms_loss_fn[0].vanilla:
-                pos_pair_w.append(torch.concat(ms_loss_fn[0].pos_pair_w).cpu().detach())
-                neg_pair_w.append(torch.concat(ms_loss_fn[0].neg_pair_w).cpu().detach())
-            # dist.barrier()
-            with open(f"results/quantize-{cfg.local_rank}.pt", "wb") as f:
-                pickle.dump((
-                    pos_pair_thresh,
-                    neg_pair_thresh,
-                    pos_pair_w,
-                    neg_pair_w
-                ), f)
+        # if epoch % 10 == 0 and use_ms:
+        #     pos_pair_thresh.append(torch.concat(ms_loss_fn.pos_pair_thresh).cpu().detach())
+        #     neg_pair_thresh.append(torch.concat(ms_loss_fn.neg_pair_thresh).cpu().detach())
+        #     if not ms_loss_fn.vanilla:
+        #         pos_pair_w.append(torch.concat(ms_loss_fn.pos_pair_w).cpu().detach())
+        #         neg_pair_w.append(torch.concat(ms_loss_fn.neg_pair_w).cpu().detach())
+        #     # dist.barrier()
+        #     with open(f"results/quantize-{cfg.local_rank}.pt", "wb") as f:
+        #         pickle.dump((
+        #             pos_pair_thresh,
+        #             neg_pair_thresh,
+        #             pos_pair_w,
+        #             neg_pair_w
+        #         ), f)
         
         # eval on dev
         model.eval()
@@ -182,6 +159,7 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
                 precision = tp_sum.sum() / pred_sum.sum()
                 recall = tp_sum.sum() / true_sum.sum()
                 f1 = 2. * precision * recall / (precision + recall)
+                f1 = f1.item()
             cfg.logger.info(f"Eval f1: {f1}")
 
             if best_f1 == -1 or best_f1 < f1:
@@ -192,13 +170,20 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
         if cfg.local_rank != -1:
             dist.broadcast(best_epoch, src=0)
         # stop condition
-        if epoch >= cfg.TRAIN.EPOCHS and epoch - best_epoch >= 10:
-            if cfg.local_rank in [-1, 0]:
-                cfg.logger.info(f"Best checkpoint at {best_epoch} epoch and stopped")
-            break
+        if early_stop:
+            if epoch >= cfg.TRAIN.EPOCHS and epoch - best_epoch >= 10:
+                if cfg.local_rank in [-1, 0]:
+                    cfg.logger.info(f"Best checkpoint at {best_epoch} epoch and stopped")
+                break
+        else:
+            if epoch >= cfg.TRAIN.EPOCHS:
+                break
         
         epoch += 1
-    return best_model, best_f1
+    if early_stop:
+        return best_model, best_f1
+    else:
+        return model, f1
 
 def get(cfg, model):
     if cfg.local_rank == -1:

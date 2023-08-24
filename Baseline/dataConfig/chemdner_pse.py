@@ -10,7 +10,8 @@ from tqdm import tqdm
 from datasets import load_dataset, Dataset, DatasetDict
 from transformers import AutoTokenizer, AutoAdapterModel
 
-from utils.config import get_src_dataset, get_tgt_dataset
+from dataConfig.biomedical import biomedical
+from dataConfig.CrossNER import *
 from .chemdner import chemdner
 
 data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/chemdner_corpus"
@@ -31,9 +32,11 @@ class chemdner_pse(chemdner):
         else:
             with open(self.raw_cache_file, "rb") as file:
                 self.annotations, self.texts, self.etts = pickle.load(file)
+        self.pseudo_labels = ["O", "B-OOD", "I-OOD"]
 
-    def add_pseudo_label(self, batch):
+    def add_pseudo_tag(self, batch):
         tokens = []
+        pse_tags = [0] * len(batch['tokens'])
         for col, (token, token_id, tag, pse) in enumerate(zip(batch['tokens'], batch['token_id'], batch['ner_tags'], batch['pse_labels'])):
             if tag == 0 and pse not in ["B-Chemical", "I-Chemical"]:
                 if pse.startswith("B-"):
@@ -43,9 +46,10 @@ class chemdner_pse(chemdner):
                 if pse != "O":
                     tokens.append(token)
                     batch['token_id'][col] = len(self.etts)
-                    batch['ner_tags'][col] = len(self.labels) + (pse.startswith("I-"))
+                    pse_tags[col] = 1 + (pse.startswith("I-"))
         if len(tokens) > 0:
             self.etts.append(' '.join(tokens))
+        batch['pse_tags'] = pse_tags
         return batch
 
     def init_pseudo_label(self):
@@ -57,11 +61,16 @@ class chemdner_pse(chemdner):
             with open(self.pseudo_label_file, "r") as f:
                 predictions = json.load(f)
         else:
-            src_data = get_src_dataset(self.cfg)
+            if self.cfg.DATA.SRC_DATASET == "biomedical":
+                src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY)
+            elif self.cfg.DATA.SRC_DATASET in ["politics", "science", "music", "literature", "ai"]:
+                src_data = globals()[type](self.cfg, self.cfg.MODEL.BACKBONE)
+            else:
+                raise NotImplementedError(f"dataset {cfg.DATA.SRC_DATASET} is not supported")
             dataset = self.load(tokenizer)
             dataloader = torch.utils.data.DataLoader(dataset["training"], batch_size=self.cfg.EVAL.BATCH_SIZE)
 
-            adapter_name = self.cfg.ADAPTER.EVAL
+            adapter_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE
             head_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE + "_head"
             model = AutoAdapterModel.from_pretrained(model_name)
             model.load_adapter(os.path.join(self.cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
@@ -87,16 +96,26 @@ class chemdner_pse(chemdner):
         # tokenize
         dataset = self.load_dataset(tokenizer)
         dataset['training'] = dataset['training'].add_column("pse_labels", predictions)
-        dataset['training'] = dataset['training'].map(self.add_pseudo_label, batched=False)
+        dataset['training'] = dataset['training'].map(self.add_pseudo_tag, batched=False)
         dataset = dataset.map(self.encode_labels, fn_kwargs={'tokenizer': tokenizer})
         dataset = dataset.map(self.encode_data, batched=True, batch_size=32, fn_kwargs={'tokenizer': tokenizer})
         dataset.set_format(type='torch', columns=[
-            'input_ids', 'token_type_ids', 'attention_mask', 'labels', 'label_mask', 'ner_tags', 'token_id'
+            'input_ids', 'token_type_ids', 'attention_mask', 'labels', 'label_mask', 'ner_tags', 'pse_tags', 'token_id'
         ])
         with open(self.cache_file, "wb") as file:
             pickle.dump(dataset, file)
         with open(self.raw_cache_file, "wb") as file:
             pickle.dump((self.annotations, self.texts, self.etts), file)
+    
+    def encode_data(self, data, tokenizer):
+        encoded = tokenizer([" ".join(doc) for doc in data["tokens"]], pad_to_max_length=True, padding="max_length",
+                            max_length=512, truncation=True, add_special_tokens=True)
+        for col in ['ner_tags', 'pse_tags', 'token_id']:
+            if col in data:
+                encoded[col] = [vec[:512] + [0] * max(0, 512 - len(vec)) for vec in data[col]]
+            else:
+                encoded[col] = [[0] * 512 for vec in data['tokens']]
+        return encoded
     
     def report_bio_chem_portion(self):
         with open(self.pseudo_label_file, "r") as f:

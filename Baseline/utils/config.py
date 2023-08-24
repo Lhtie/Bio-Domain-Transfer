@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from dataConfig.chemdner import chemdner
+from dataConfig.chemdner_pse import chemdner_pse
 from dataConfig.biomedical import biomedical
 from dataConfig.CrossNER import *
 
@@ -20,8 +21,9 @@ def read_config(file):
 def get_dataset(cfg, type):
     if type == "chemdner":
         data = chemdner(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
-        if cfg.TRAIN.ORACLE:
-            cfg.DATA.SRC_DATASET += "_oracle"
+    elif type == "chemdner_pse":
+        data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE, 
+                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
     elif type in ["politics", "science", "music", "literature", "ai"]:

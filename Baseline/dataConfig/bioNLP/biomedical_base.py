@@ -37,6 +37,11 @@ class Event:
                 self.full_args_map[arg_key] = arg_val
 
         self.self = None
+
+    def __str__(self):
+        return f'<{self.identifier}: ' + ' '.join(
+            [f'({key})[{val}]' for key, val in self.full_args_map.items()]
+        ) + '>'
     
     def set_self(self, x):
         self.self = x

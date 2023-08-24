@@ -3,14 +3,14 @@ MODEL:
   PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
   
 ADAPTER:
-  TRAIN: None
-  EVAL: biomedical_ner_bert-base-uncased_2stage
+  TRAIN: adapter/para/tl/biomedical_None/chemdner/biomedical_ner_bert-base-uncased_inter
+  EVAL: biomedical_ner_bert-base-uncased
 
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
     SIM_METHOD: None
-  TGT_DATASET: chemdner
+  TGT_DATASET: chemdner_pse
   GRANULARITY: para
 
 TRAIN:
@@ -21,25 +21,24 @@ TRAIN:
   SRC_LR: 0.0001
   LR: 0.0001
   ORACLE: False
-  TWO_STAGE: True
+  TWO_STAGE: False
   SEED: 42
 
 EVAL:
   OVERWRITE: True
   BATCH_SIZE: 128
 
-LOSSES:
+SRC_LOSS:
+  NAME: CrossEntropy
+
+TGT_LOSS:
   NAME: CE_MS
-  LAMBDA_DISC: 0.2
-  LAMBDA_CLUS: 0.8
+  LAMBDA: 0.1
   MULTI_SIMILARITY_LOSS:
     SCALE_POS: 2.0
     SCALE_NEG: 5.0
-    SCALE_POS_WEIGHT: 6.0
-    SCALE_NEG_WEIGHT: 10.0
-    VANILLA: False
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/ms
-  HEAD_SAVE_DIR: head/para/ms
-  RESULT_SAVE_DIR: results/para/ms
+  ADAPTER_SAVE_DIR: adapter/para/tl/disc/biomedical_None/chemdner_pse
+  HEAD_SAVE_DIR: head/para/tl/disc/biomedical_None/chemdner_pse
+  RESULT_SAVE_DIR: results/para/tl/disc/biomedical_None/chemdner_pse

@@ -24,8 +24,6 @@ if __name__ == "__main__":
     else:
         adapter_name = cfg.ADAPTER.EVAL
     head_name = cfg.DATA.TGT_DATASET + f"_ner_{cfg.MODEL.BACKBONE}_head"
-    if cfg.TRAIN.TWO_STAGE:
-        head_name += "_2stage"
 
     # load model
     model_name = cfg.MODEL.PATH

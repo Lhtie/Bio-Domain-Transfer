@@ -39,9 +39,7 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     else:
         train_set = Dataset.from_dict(dataset['training'][:50])
         # train_set = dataset['training']
-        train_set.set_format(type='torch', columns=[
-            'input_ids', 'token_type_ids', 'attention_mask', 'labels', 'label_mask', 'ner_tags', 'token_id'
-        ])
+        train_set.set_format(type='torch')
         dataloader = torch.utils.data.DataLoader(train_set, batch_size=16)
         model.to(cfg.device).eval()
         ids_list, feats_list = [], []
@@ -50,12 +48,12 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
 
             with torch.no_grad():
                 outputs = model(batch["input_ids"])
-                feat, _ = extract_feat(
+                feat = extract_feat(
                     outputs[0], 
                     batched_label_mask=batch["label_mask"],
                     batched_token_id=batch['token_id'],
                     batched_token_label=batch['ner_tags'],
-                    overlap_labels=[]
+                    pseudo_labels=batch['pse_tags'] if 'pse_tags' in batch else None
                 )
                 ids, feats, _ = feat.tensorize()
                 ids_list.append(ids.detach().cpu().numpy())
@@ -65,60 +63,19 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
         with open(cache_file, "wb") as f:
             pickle.dump((ids, feats), f)
-
-    ### is_chem & clustering labels
-    # id2ischem = {}
-    # if is_src:
-    #     for batch in Dataset.from_dict(dataset['training'][:50]):
-    #         for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
-    #             if tag > 0 and token_id != -1:
-    #                 id2ischem[token_id] = tag in [1, 2]
-    # else:
-    #     for batch in Dataset.from_dict(dataset['training'][:50]):
-    #         for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
-    #             if tag > 0 and token_id != -1:
-    #                 id2ischem[token_id] = tag < len(data.labels)
-    # src_data = get_src_dataset(cfg)
-    # tgt_data = get_tgt_dataset(cfg)
-    # overlap_labels = list(set(src_data.labels) & set(tgt_data.labels))
-    # for batch in Dataset.from_dict(dataset['training'][:50]):
-    #     for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
-    #         if tag > 0 and token_id != -1:
-    #             id2ischem[token_id] = data.labels[tag] in overlap_labels
-    # model = EntityEncoder(sapbert_path)
-    # model = EntityEncoder(bert_path, cache_dir=".cache/", adapter_path=adapter_path[data.ds_name.split("_")[0].lower()])
-    # embs = model.get_embedding(data.etts)
-    # central_emb = np.stack(embs.values())
-    # k_range = range(2, 20)
-    # best_k, best_labels, results = chooseBestKforKMeansParallel(central_emb, k_range)
-    # print(results)
-    # labels = []
-    # for id in ids:
-    #     # cluster = best_labels[list(embs.keys()).index(data.etts[id])]
-    #     # labels.append(cluster)
-    #     if id2ischem[id]:
-    #         # labels.append(f"Chemical-Group {cluster}")
-    #         labels.append("Chemical")
-    #     else:
-    #         # labels.append(f"Non-Chemical-Group {cluster}")
-    #         labels.append("Non-Chemical")
     
     ### ner_tag labels
     id2tag = {}
     for batch in dataset['training']:
-        for token_id, tag in zip(batch['token_id'], batch['ner_tags']):
+        pse_tags = batch['pse_tags'] if 'pse_tags' in batch else torch.zeros_like(batch['ner_tags'])
+        for token_id, tag, p_tag in zip(batch['token_id'], batch['ner_tags'], pse_tags):
             if tag > 0:
-                if tag < len(data.labels):
-                    id2tag[token_id.item()] = data.labels[tag].split("-")[-1]
-                else:
-                    id2tag[token_id.item()] = "OOD"
+                id2tag[token_id.item()] = data.labels[tag].split("-")[-1]
+            if p_tag > 0:
+                id2tag[token_id.item()] = "OOD"
     labels = []
     for id in ids:
         labels.append(id2tag[id])
-    # feats = []
-    # for id in ids:
-    #     feats.append(embs[data.etts[id]])
-    # feats = np.stack(feats)
 
     tsne = TSNE(n_components=2, verbose=1, random_state=42)
     z = tsne.fit_transform(feats)
@@ -142,9 +99,60 @@ def draw(cfg, model, tokenizer, data, suffix='', is_src=True):
     # plt.legend(bbox_to_anchor=(1.25, 1), borderaxespad=0)
     sns_plot.figure.savefig(f"analysis/scatters/{data.ds_name}-{suffix}.png", dpi=300)
 
+def draw_emb(cfg, tokenizer, data, suffix=''):
+    ids, central_emb = [], []
+    for id, (entity, events) in enumerate(data.ett_rel_set.items()):
+        if len(events) > 0:
+            ids.append(id)
+            central_emb.append(np.mean(events, axis=0))
+        
+    central_emb = np.stack(central_emb)
+    k_range = range(10, 20)
+    best_k, best_labels, results = chooseBestKforKMeansParallel(central_emb, k_range)
+    print(results)
+    print(f"Best K: {best_k}")
+
+    ### ner_tag labels
+    dataset = data.load(tokenizer)
+    id2tag = {}
+    for split in ['training', 'development', 'evaluation']:
+        for batch in dataset[split]:
+            pse_tags = batch['pse_tags'] if 'pse_tags' in batch else torch.zeros_like(batch['ner_tags'])
+            for token_id, tag, p_tag in zip(batch['token_id'], batch['ner_tags'], pse_tags):
+                if tag > 0:
+                    id2tag[token_id.item()] = data.labels[tag].split("-")[-1]
+                if p_tag > 0:
+                    id2tag[token_id.item()] = "OOD"
+    labels = []
+    for id in ids:
+        if id in id2tag:
+            labels.append(id2tag[id])
+        else:
+            labels.append("UNK")
+    labels = best_labels
+    oridata = biomedical(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
+    for id, label in zip(ids, best_labels):
+        if label == 10 and id in id2tag:
+            print(data.etts[id], id2tag[id], '{' + ', '.join([str(x) for x in oridata.ett_rel_set[oridata.etts[id]]]) + '}')
+
+    tsne = TSNE(n_components=2, verbose=1, random_state=42)
+    z = tsne.fit_transform(central_emb)
+    df = pd.DataFrame()
+    df["x"] = z[:,0]
+    df["y"] = z[:,1]
+    title=f"T-SNE projection of {data.ds_name.split('_')[0]} entity embeddings ({suffix})"
+    plt.clf()
+    # plt.figure(figsize=(8, 6))
+    color_palette = sns.color_palette("hls", len(set(labels)))
+    sns_plot = sns.scatterplot(x="x", y="y",  hue=labels,
+                palette=color_palette, data=df)
+    sns_plot.set(title=title)
+    # plt.legend(bbox_to_anchor=(1.25, 1), borderaxespad=0)
+    sns_plot.figure.savefig(f"analysis/scatters/{data.ds_name}-emb-{suffix}.png", dpi=300)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cfg_file", type=str, default="configs/sample.yaml")
+    parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning.yaml")
     args = parser.parse_args()
     cfg = read_config(args.cfg_file)
     cfg.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -158,20 +166,31 @@ if __name__ == "__main__":
     adapter_name = cfg.ADAPTER.EVAL
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
-    model = AutoAdapterModel.from_pretrained(model_path)
-    draw(cfg, model, tokenizer, src_data, 'BERT', True)
-    draw(cfg, model, tokenizer, tgt_data, 'BERT', False)
+    # model = AutoAdapterModel.from_pretrained(model_path)
+    # draw(cfg, model, tokenizer, src_data, 'BERT', True)
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT', False)
 
-    cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/biomedical_None/chemdner"
-    model = AutoAdapterModel.from_pretrained(model_path)
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    model.set_active_adapters([adapter_name])
-    draw(cfg, model, tokenizer, src_data, 'BERT+SRC', True)
-    draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC', False)
+    draw_emb(
+        cfg, tokenizer,
+        biomedical(read_config("configs/para/transfer_learning_eg.yaml"), cfg.MODEL.BACKBONE), 
+        suffix='concat'
+    )
 
-    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/ms/entityEnc-max/politics/music"
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/eg/concat-clus/biomedical_None/chemdner"
     # model = AutoAdapterModel.from_pretrained(model_path)
     # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
     # model.set_active_adapters([adapter_name])
-    # draw(cfg, model, tokenizer, src_data, 'BERT+SRC (SW)', True)
-    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (SW)', False)
+    # draw(cfg, model, tokenizer, src_data, 'BERT+SRC (EG)', True)
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (EG)', False)
+
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/biomedical_None/chemdner"
+    # model = AutoAdapterModel.from_pretrained(model_path)
+    # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name))
+    # model.set_active_adapters([adapter_name])
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC+TGT', False)
+
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/disc/biomedical_None/chemdner_pse"
+    # model = AutoAdapterModel.from_pretrained(model_path)
+    # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name))
+    # model.set_active_adapters([adapter_name])
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC+TGT (DISC)', False)

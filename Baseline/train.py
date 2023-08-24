@@ -11,6 +11,7 @@ import copy
 import argparse
 import numpy as np
 import logging
+import json
 
 from utils.trainer import get, train
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
@@ -47,8 +48,14 @@ def train_single(cfg, model, tokenizer):
 
     # add adapter
     adapter_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE
-    head_name = adapter_name + "_head"
-    model.add_adapter(adapter_name)
+    head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
+    if cfg.ADAPTER.TRAIN != "None":
+        with open(os.path.join(cfg.ADAPTER.TRAIN, "adapter_config.json"), "r") as f:
+            config = json.load(f)
+        adapter_name = config["name"]
+        model.load_adapter(cfg.ADAPTER.TRAIN)
+    else:
+        model.add_adapter(adapter_name)
     model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
     model.train_adapter([adapter_name])
     model.to(cfg.device)
@@ -57,7 +64,12 @@ def train_single(cfg, model, tokenizer):
 
     # train
     cfg.TRAIN.EPOCHS = cfg.TRAIN.TGT_EPOCHS
-    model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    if cfg.TGT_LOSS.NAME == "CE_MS":
+        model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True)
+    elif cfg.TGT_LOSS.NAME == "CrossEntropy":
+        model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    else:
+        raise NotImplementedError()
     return model, adapter_name, head_name, best_f1
 
 def train_two_stage(cfg, model, tokenizer):
@@ -65,7 +77,7 @@ def train_two_stage(cfg, model, tokenizer):
     train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, True)
 
     # add adapter
-    adapter_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_2stage"
+    adapter_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE
     head_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
     model.add_adapter(adapter_name)
     model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
@@ -76,9 +88,9 @@ def train_two_stage(cfg, model, tokenizer):
 
     # train 4 src
     cfg.TRAIN.EPOCHS = cfg.TRAIN.SRC_EPOCHS
-    if cfg.LOSSES.NAME == "CE_MS":
-        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True)
-    elif cfg.LOSSES.NAME == "CrossEntropy":
+    if cfg.SRC_LOSS.NAME == "CE_MS":
+        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True, early_stop=False)
+    elif cfg.TGT_LOSS.NAME == "CrossEntropy":
         model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, pretrain=True)
     else:
         raise NotImplemented
@@ -90,11 +102,12 @@ def train_two_stage(cfg, model, tokenizer):
         cfg.logger.info("Best model for the 1st stage saved")
 
     # prepare for target
+    set_seed(cfg.TRAIN.SEED)
     train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, False)
 
     model = AutoAdapterModel.from_pretrained(cfg.MODEL.PATH)
     model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head_2stage"
+    head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
     model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label, overwrite_ok=True)
     model.train_adapter([adapter_name])
     model.to(cfg.device)
@@ -103,7 +116,12 @@ def train_two_stage(cfg, model, tokenizer):
 
     # train 4 tgt
     cfg.TRAIN.EPOCHS = cfg.TRAIN.TGT_EPOCHS
-    model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    if cfg.TGT_LOSS.NAME == "CE_MS":
+        model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True)
+    elif cfg.TGT_LOSS.NAME == "CrossEntropy":
+        model, best_f1 = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name)
+    else:
+        raise NotImplementedError()
     return model, adapter_name, head_name, best_f1
 
 if __name__ == "__main__":
