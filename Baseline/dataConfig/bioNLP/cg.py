@@ -77,11 +77,6 @@ class cg(BiomedicalBaseDataConfig):
 
     def parse(self, lines, pmid, id2entity, triggers, msgs):
         for line in lines:
-            if line.startswith("*"):
-                t1, t2 = line.strip().split(' ')[-2:]
-                if pmid + t1 in id2entity and pmid + t2 in id2entity:
-                    self.add_relation(id2entity[pmid+t1], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
-                    self.add_relation(id2entity[pmid+t2], Event(f"Equivalent-{pmid}_{t1}_{t2}"))
             if line.startswith("E"):
                 idx, ctx = line.strip().split('\t')
                 ctx = ctx.split(' ')

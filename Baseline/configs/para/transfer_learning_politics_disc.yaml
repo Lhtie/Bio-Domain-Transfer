@@ -1,0 +1,42 @@
+MODEL:
+  BACKBONE: bert-base-uncased
+  PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
+  
+ADAPTER:
+  TRAIN: adapter/para/crossner/politics/politics_ner_bert-base-uncased
+  EVAL: politics_ner_bert-base-uncased
+
+DATA:
+  SRC_DATASET: politics
+  TGT_DATASET: music_pse
+  GRANULARITY: para
+
+TRAIN:
+  SRC_EPOCHS: 120
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
+  LR: 0.0001
+  ORACLE: False
+  TWO_STAGE: False
+  SEED: 42
+
+EVAL:
+  OVERWRITE: True
+  BATCH_SIZE: 128
+
+SRC_LOSS:
+  NAME: CrossEntropy
+
+TGT_LOSS:
+  NAME: CE_MS
+  LAMBDA: 0.1
+  MULTI_SIMILARITY_LOSS:
+    SCALE_POS: 2.0
+    SCALE_NEG: 5.0
+
+OUTPUT:
+  ADAPTER_SAVE_DIR: adapter/para/crossner/disc/politics/music_pse
+  HEAD_SAVE_DIR: head/para/crossner/disc/politics/music_pse
+  RESULT_SAVE_DIR: results/para/crossner/disc/politics/music_pse

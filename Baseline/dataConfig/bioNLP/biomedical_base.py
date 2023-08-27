@@ -74,9 +74,6 @@ class Event:
         return np.array(compressed)
 
     def get_embedding_concat(self, id2event, embs_map, mean, cov, self_emb):
-        if self.identifier.startswith("Equivalent-"):
-            return np.concatenate([embs_map[self.identifier]] * (len(self.arguments) + 1))
-
         arr = [embs_map[self.identifier]]
         for key, vals in zip(self.arguments, self.arg_vals):
             cur_embs = []
@@ -95,9 +92,6 @@ class Event:
         return np.concatenate(arr)
 
     def get_embedding_sentEnc(self, id2event, tp):
-        if self.identifier.startswith("Equivalent-"):
-            return self.identifier
-
         event_type, trigger = self.identifier.split(": ")
         self.full_args_map["Trigger"] = [trigger]
         event_tp = tp[event_type.split(" ")[0]]

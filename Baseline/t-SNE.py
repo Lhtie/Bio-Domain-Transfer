@@ -170,18 +170,18 @@ if __name__ == "__main__":
     # draw(cfg, model, tokenizer, src_data, 'BERT', True)
     # draw(cfg, model, tokenizer, tgt_data, 'BERT', False)
 
-    draw_emb(
-        cfg, tokenizer,
-        biomedical(read_config("configs/para/transfer_learning_eg.yaml"), cfg.MODEL.BACKBONE), 
-        suffix='concat'
-    )
+    # draw_emb(
+    #     cfg, tokenizer,
+    #     biomedical(read_config("configs/para/transfer_learning_eg.yaml"), cfg.MODEL.BACKBONE), 
+    #     suffix='concat'
+    # )
 
-    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/eg/concat-clus/biomedical_None/chemdner"
-    # model = AutoAdapterModel.from_pretrained(model_path)
-    # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    # model.set_active_adapters([adapter_name])
-    # draw(cfg, model, tokenizer, src_data, 'BERT+SRC (EG)', True)
-    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (EG)', False)
+    cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/eg/concat-max/src-lambda=0.4/biomedical_None/chemdner"
+    model = AutoAdapterModel.from_pretrained(model_path)
+    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
+    model.set_active_adapters([adapter_name])
+    draw(cfg, model, tokenizer, src_data, 'BERT+SRC (EG)', True)
+    draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (EG)', False)
 
     # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/biomedical_None/chemdner"
     # model = AutoAdapterModel.from_pretrained(model_path)

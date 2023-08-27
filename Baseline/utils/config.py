@@ -28,6 +28,11 @@ def get_dataset(cfg, type):
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
     elif type in ["politics", "science", "music", "literature", "ai"]:
         data = globals()[type](cfg, cfg.MODEL.BACKBONE)
+    elif type in ["music_pse", "literature_pse", "ai_pse"]:
+        if cfg.DATA.SRC_DATASET == "politics":
+            data = globals()[type](read_config("configs/para/transfer_learning_politics.yaml"), cfg.MODEL.BACKBONE)
+        elif cfg.DATA.SRC_DATASET == "science":
+            data = globals()[type](read_config("configs/para/transfer_learning_science.yaml"), cfg.MODEL.BACKBONE)
     else:
         raise NotImplementedError(f"dataset {cfg.DATA.SRC_DATASET} is not supported")
     return data

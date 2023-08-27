@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # if args.scale_neg_w is not None:
     #     cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
 
-    suffix += f"/{cfg.DATA.SRC_DATASET}_{args.datasets}/{cfg.DATA.TGT_DATASET}"
+    suffix += f"/{cfg.DATA.SRC_DATASET}/{cfg.DATA.TGT_DATASET}"
     cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix
     cfg.OUTPUT.HEAD_SAVE_DIR = '/'.join(cfg.OUTPUT.HEAD_SAVE_DIR.split('/')[:-2]) + suffix
     cfg.OUTPUT.RESULT_SAVE_DIR = '/'.join(cfg.OUTPUT.RESULT_SAVE_DIR.split('/')[:-2]) + suffix
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             best_model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, best_adapter_name), best_adapter_name)
             best_model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, best_head_name), best_head_name)
             cfg.logger.info("Best model saved")
-            with open("results/para/eg/tgt_disc.json", "w") as f:
+            with open(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.json"), "w") as f:
                 json.dump(res, f)
 
             plt.clf()
@@ -201,12 +201,12 @@ if __name__ == "__main__":
             best = np.argmax([float(x[0]) for x in res.values()])
             print(list(res.keys())[best], list(res.values())[best][0], list(res.values())[best][1])
 
-            plt.savefig("results/para/eg/disc_result.png", dpi=300)
+            plt.savefig(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "disc_result.png"), dpi=300)
 
     elif args.two_stage_train:
         valid_f1s, test_f1s = [], []
         model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
-        if cfg.local_rank in [-1, 0]:   # seend 42
+        if cfg.local_rank in [-1, 0]:   # seed 42
             valid_f1s.append(valid_f1)
             test_f1s.append(test_f1)
 
