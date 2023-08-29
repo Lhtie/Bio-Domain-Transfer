@@ -2,9 +2,18 @@ import torch
 import os
 import json
 import datasets
+import pickle
+import numpy as np
+from tqdm import tqdm
+from datasets import load_dataset, Dataset, DatasetDict
+from transformers import AutoTokenizer, AutoAdapterModel
 
 from ..base import BaseDataConfig
 from .crossner_base import CrossNERBaseDataConfig
+from dataConfig.biomedical import biomedical
+from dataConfig.CrossNER import *
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class literature(CrossNERBaseDataConfig):
     def __init__(self, cfg, tokenizer_name, cache_dir=".cache/", overwrite=False, oracle=False, sim_method=None):
@@ -60,12 +69,12 @@ class literature_pse(literature):
             with open(self.pseudo_label_file, "r") as f:
                 predictions = json.load(f)
         else:
-            if self.cfg.DATA.SRC_DATASET == "biomedical":
+            if self.cfg.DATA.TGT_DATASET == "biomedical":
                 src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY)
-            elif self.cfg.DATA.SRC_DATASET in ["politics", "science", "music", "literature", "ai"]:
-                src_data = globals()[type](self.cfg, self.cfg.MODEL.BACKBONE)
+            elif self.cfg.DATA.TGT_DATASET in ["politics", "science", "music", "literature", "ai"]:
+                src_data = globals()[self.cfg.DATA.TGT_DATASET](self.cfg, self.cfg.MODEL.BACKBONE)
             else:
-                raise NotImplementedError(f"dataset {cfg.DATA.SRC_DATASET} is not supported")
+                raise NotImplementedError(f"dataset {self.cfg.DATA.TGT_DATASET} is not supported")
             dataset = self.load(tokenizer)
             dataloader = torch.utils.data.DataLoader(dataset["training"], batch_size=self.cfg.EVAL.BATCH_SIZE)
 

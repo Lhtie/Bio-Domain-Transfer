@@ -3,7 +3,7 @@ MODEL:
   PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
   
 ADAPTER:
-  TRAIN: adapter/para/eg/biomedical_None/chemdner/biomedical_ner_bert-base-uncased_inter
+  TRAIN: None
   EVAL: biomedical_ner_bert-base-uncased
 
 DATA:
@@ -32,16 +32,16 @@ SRC_LOSS:
   NAME: CE_MS
   LAMBDA: 0.4
   MULTI_SIMILARITY_LOSS:
-    SCALE_POS: 2.0
-    SCALE_NEG: 5.0
-    SCALE_POS_WEIGHT: 4.0
-    SCALE_NEG_WEIGHT: 10.0
+    SCALE_POS: 4.0
+    SCALE_NEG: 2.0
+    SCALE_POS_WEIGHT: 8.0
+    SCALE_NEG_WEIGHT: 4.0
     VANILLA: False
 
 TGT_LOSS:
   NAME: CrossEntropy
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/eg/biomedical_None/chemdner
-  HEAD_SAVE_DIR: head/para/eg/biomedical_None/chemdner
-  RESULT_SAVE_DIR: results/para/eg/biomedical_None/chemdner
+  ADAPTER_SAVE_DIR: adapter/para/eg/biomedical/chemdner
+  HEAD_SAVE_DIR: head/para/eg/biomedical/chemdner
+  RESULT_SAVE_DIR: results/para/eg/biomedical/chemdner

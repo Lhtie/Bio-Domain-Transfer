@@ -4,8 +4,9 @@ import random
 import numpy as np
 import torch
 
-from dataConfig.chemdner import chemdner
-from dataConfig.chemdner_pse import chemdner_pse
+from dataConfig.chemdner import chemdner, chemdner_pse
+from dataConfig.bc5cdr import bc5cdr, bc5cdr_pse
+from dataConfig.drugprot import drugprot, drugprot_pse
 from dataConfig.biomedical import biomedical
 from dataConfig.CrossNER import *
 
@@ -23,6 +24,16 @@ def get_dataset(cfg, type):
         data = chemdner(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "chemdner_pse":
         data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE, 
+                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "bc5cdr":
+        data = bc5cdr(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "bc5cdr_pse":
+        data = bc5cdr_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE,
+                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "drugprot":
+        data = drugprot(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "drugprot_pse":
+        data = drugprot_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE,
                             granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)

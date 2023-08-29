@@ -184,6 +184,7 @@ if __name__ == "__main__":
         if cfg.local_rank in [-1, 0]:
             os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, best_adapter_name), exist_ok=True)
             os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, best_head_name), exist_ok=True)
+            os.makedirs(cfg.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
             best_model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, best_adapter_name), best_adapter_name)
             best_model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, best_head_name), best_head_name)
             cfg.logger.info("Best model saved")

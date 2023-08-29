@@ -4,3 +4,6 @@ from .science import science
 from .music import music
 from .literature import literature
 from .ai import ai
+from .music import music_pse
+from .literature import literature_pse
+from .ai import ai_pse

@@ -39,17 +39,17 @@ class CrossNERBaseDataConfig(BaseDataConfig):
             self.emb_method, self.agg_method = self.sim_method.split('-')
         self.oracle = oracle
 
-        cache_file = os.path.join(cache_dir, f"{ds_name}_{tokenizer_name}_{sim_method}_raw.pt")
+        self.raw_cache_file = os.path.join(cache_dir, f"{ds_name}_{tokenizer_name}_{sim_method}_raw.pt")
         os.makedirs(cache_dir, exist_ok=True)
 
-        if not overwrite and os.path.exists(cache_file):
-            with open(cache_file, "rb") as file:
+        if not overwrite and os.path.exists(self.raw_cache_file):
+            with open(self.raw_cache_file, "rb") as file:
                 self.dataset, self.etts, self.sim_weight, self.K, self.clusters = pickle.load(file)
         else:
             self.dataset, self.etts = {}, []
             self.load_raw_data()
             self.init_sim_weight()
-            with open(cache_file, "wb") as file:
+            with open(self.raw_cache_file, "wb") as file:
                 pickle.dump((self.dataset, self.etts, self.sim_weight, self.K, self.clusters), file)
 
     def read_from_file(self, file, split):

@@ -3,7 +3,7 @@ MODEL:
   PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
   
 ADAPTER:
-  TRAIN: adapter/para/tl/biomedical_None/chemdner/biomedical_ner_bert-base-uncased_inter
+  TRAIN: adapter/para/tl/biomedical/biomedical_ner_bert-base-uncased_inter
   EVAL: biomedical_ner_bert-base-uncased
 
 DATA:
@@ -39,6 +39,6 @@ TGT_LOSS:
     SCALE_NEG: 5.0
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/tl/disc/biomedical_None/chemdner_pse
-  HEAD_SAVE_DIR: head/para/tl/disc/biomedical_None/chemdner_pse
-  RESULT_SAVE_DIR: results/para/tl/disc/biomedical_None/chemdner_pse
+  ADAPTER_SAVE_DIR: adapter/para/tl/disc/biomedical/chemdner_pse
+  HEAD_SAVE_DIR: head/para/tl/disc/biomedical/chemdner_pse
+  RESULT_SAVE_DIR: results/para/tl/disc/biomedical/chemdner_pse

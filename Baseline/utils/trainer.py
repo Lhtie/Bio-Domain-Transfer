@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 import numpy as np
+import os
 import copy
 import pickle
 
@@ -18,12 +19,16 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
     if use_ms:
         get(cfg, model).active_head = None
         ms_loss_fn = MultiSimilarityLoss(cfg, "src" if pretrain else "tgt")
+        # determine whether use clusters
+        use_clus = pretrain and cfg.data.sim_method is not None and cfg.data.sim_method.split('-')[1] == "clus"
         # prepare sim weight matrix
         if pretrain and hasattr(cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS, "VANILLA") and \
             not cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.VANILLA:
             sim_weight = cfg.data.sim_weight.to(cfg.device)
         else:
             sim_weight = None
+        if use_clus:
+            cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.VANILLA = True
         
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -62,8 +67,9 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
                     batched_label_mask=batch["label_mask"],
                     batched_token_id=batch['token_id'],
                     batched_token_label=batch['ner_tags'],
-                    pseudo_labels=batch['pse_tags'] if not pretrain else None
-                    # cluster_map=cfg.data.clusters if pretrain else None
+                    pseudo_labels=batch['pse_tags'] 
+                        if cfg.data.__class__.__name__.endswith("_pse") else None,
+                    cluster_map=cfg.data.clusters if pretrain and use_clus else None
                 )
                 ids, feats, labels = feat_obj.tensorize()
                 ms_loss = ms_loss_fn(
@@ -107,20 +113,21 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
             else:
                 cfg.logger.info(f"loss: {np.mean(losses)}")
 
-        # if epoch % 10 == 0 and use_ms:
-        #     pos_pair_thresh.append(torch.concat(ms_loss_fn.pos_pair_thresh).cpu().detach())
-        #     neg_pair_thresh.append(torch.concat(ms_loss_fn.neg_pair_thresh).cpu().detach())
-        #     if not ms_loss_fn.vanilla:
-        #         pos_pair_w.append(torch.concat(ms_loss_fn.pos_pair_w).cpu().detach())
-        #         neg_pair_w.append(torch.concat(ms_loss_fn.neg_pair_w).cpu().detach())
-        #     # dist.barrier()
-        #     with open(f"results/quantize-{cfg.local_rank}.pt", "wb") as f:
-        #         pickle.dump((
-        #             pos_pair_thresh,
-        #             neg_pair_thresh,
-        #             pos_pair_w,
-        #             neg_pair_w
-        #         ), f)
+        if epoch % 10 == 0 and use_ms and pretrain:
+            pos_pair_thresh.append(torch.concat(ms_loss_fn.pos_pair_thresh).cpu().detach())
+            neg_pair_thresh.append(torch.concat(ms_loss_fn.neg_pair_thresh).cpu().detach())
+            if not ms_loss_fn.vanilla:
+                pos_pair_w.append(torch.concat(ms_loss_fn.pos_pair_w).cpu().detach())
+                neg_pair_w.append(torch.concat(ms_loss_fn.neg_pair_w).cpu().detach())
+            # dist.barrier()
+            os.makedirs("results/quantize", exist_ok=True)
+            with open(f"results/quantize/{cfg.local_rank}.pt", "wb") as f:
+                pickle.dump((
+                    pos_pair_thresh,
+                    neg_pair_thresh,
+                    pos_pair_w,
+                    neg_pair_w
+                ), f)
         
         # eval on dev
         model.eval()
