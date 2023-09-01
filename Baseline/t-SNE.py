@@ -16,7 +16,7 @@ from utils.config import get_src_dataset, get_tgt_dataset, read_config
 from utils.multi_similarity_loss import extract_feat
 from utils.kmeans import *
 from utils.entity_encoder import EntityEncoder
-from dataConfig.chemdner_pse import chemdner_pse
+from dataConfig.chemdner import chemdner_pse, chemdner
 from dataConfig.biomedical import biomedical
 
 sapbert_path = "/mnt/data/oss_beijing/liuhongyi/models/SapBERT-from-PubMedBERT-fulltext"
@@ -129,11 +129,11 @@ def draw_emb(cfg, tokenizer, data, suffix=''):
             labels.append(id2tag[id])
         else:
             labels.append("UNK")
-    labels = best_labels
-    oridata = biomedical(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
-    for id, label in zip(ids, best_labels):
-        if label == 10 and id in id2tag:
-            print(data.etts[id], id2tag[id], '{' + ', '.join([str(x) for x in oridata.ett_rel_set[oridata.etts[id]]]) + '}')
+    # labels = best_labels
+    # oridata = biomedical(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
+    # for id, label in zip(ids, best_labels):
+    #     if label == 10 and id in id2tag:
+    #         print(data.etts[id], id2tag[id], '{' + ', '.join([str(x) for x in oridata.ett_rel_set[oridata.etts[id]]]) + '}')
 
     tsne = TSNE(n_components=2, verbose=1, random_state=42)
     z = tsne.fit_transform(central_emb)
@@ -147,8 +147,10 @@ def draw_emb(cfg, tokenizer, data, suffix=''):
     sns_plot = sns.scatterplot(x="x", y="y",  hue=labels,
                 palette=color_palette, data=df)
     sns_plot.set(title=title)
-    # plt.legend(bbox_to_anchor=(1.25, 1), borderaxespad=0)
-    sns_plot.figure.savefig(f"analysis/scatters/{data.ds_name}-emb-{suffix}.png", dpi=300)
+    plt.tight_layout()
+    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    sns_plot.figure.savefig(f"analysis/scatters/{data.ds_name}-emb-{suffix}.png", 
+                        dpi=300, bbox_inches='tight', bbox_extra_artists=[legend])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -158,7 +160,15 @@ if __name__ == "__main__":
     cfg.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     src_data = biomedical(cfg, cfg.MODEL.BACKBONE, retain_chem=True)
-    tgt_data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
+    
+    # tgt_data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE)
+    tgt_data = chemdner(cfg.MODEL.BACKBONE)
+    print(len(tgt_data.etts))
+    cnt = 0
+    for entity in tgt_data.etts:
+        if entity in src_data.etts:# and len(src_data.ett_rel_set[entity]) > 0:
+            cnt += 1
+    print(cnt)
     # src_data = get_src_dataset(cfg)
     # tgt_data = get_tgt_dataset(cfg)
 
@@ -170,18 +180,18 @@ if __name__ == "__main__":
     # draw(cfg, model, tokenizer, src_data, 'BERT', True)
     # draw(cfg, model, tokenizer, tgt_data, 'BERT', False)
 
-    # draw_emb(
-    #     cfg, tokenizer,
-    #     biomedical(read_config("configs/para/transfer_learning_eg.yaml"), cfg.MODEL.BACKBONE), 
-    #     suffix='concat'
-    # )
+    draw_emb(
+        cfg, tokenizer,
+        biomedical(read_config("configs/para/transfer_learning_eg.yaml"), cfg.MODEL.BACKBONE), 
+        suffix='concat'
+    )
 
-    cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/eg/concat-max/src-lambda=0.4/biomedical_None/chemdner"
-    model = AutoAdapterModel.from_pretrained(model_path)
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
-    model.set_active_adapters([adapter_name])
-    draw(cfg, model, tokenizer, src_data, 'BERT+SRC (EG)', True)
-    draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (EG)', False)
+    # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/eg/concat-max/src-lambda=1.2/biomedical/chemdner"
+    # model = AutoAdapterModel.from_pretrained(model_path)
+    # model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
+    # model.set_active_adapters([adapter_name])
+    # draw(cfg, model, tokenizer, src_data, 'BERT+SRC (EG)', True)
+    # draw(cfg, model, tokenizer, tgt_data, 'BERT+SRC (EG)', False)
 
     # cfg.OUTPUT.ADAPTER_SAVE_DIR = "adapter/para/biomedical_None/chemdner"
     # model = AutoAdapterModel.from_pretrained(model_path)

@@ -151,10 +151,10 @@ if __name__ == "__main__":
     if args.tgt_lambda is not None:
         cfg.TGT_LOSS.LAMBDA = args.tgt_lambda
         suffix += f"/tgt_lambda={args.tgt_lambda}"
-    # if args.scale_pos_w is not None:
-    #     cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos_w
-    # if args.scale_neg_w is not None:
-    #     cfg.LOSSES.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
+    if args.scale_pos_w is not None and args.scale_neg_w is not None:
+        cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos_w
+        cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
+        suffix += f"/scale_w={args.scale_pos_w}-{args.scale_neg_w}"
 
     suffix += f"/{cfg.DATA.SRC_DATASET}/{cfg.DATA.TGT_DATASET}"
     cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix

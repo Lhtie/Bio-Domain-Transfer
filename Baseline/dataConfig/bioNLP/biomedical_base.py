@@ -84,6 +84,8 @@ class Event:
                     if val.startswith("Nested_Event-"):
                         nested_emb = id2event[val[13:]].get_embedding_concat(id2event, embs_map, mean, cov, self_emb)
                         cur_embs.append(self.downsize(nested_emb, len(self.arguments) + 1))
+                    elif val.startswith("Pad"):
+                        cur_embs.append(self.get_rand_emb(mean, cov))
                     else:
                         cur_embs.append(embs_map[val])
                 else:
