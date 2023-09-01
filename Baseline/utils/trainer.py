@@ -177,14 +177,13 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
         if cfg.local_rank != -1:
             dist.broadcast(best_epoch, src=0)
         # stop condition
-        if early_stop:
-            if epoch >= cfg.TRAIN.EPOCHS and epoch - best_epoch >= 10:
-                if cfg.local_rank in [-1, 0]:
+        if epoch >= cfg.TRAIN.EPOCHS and epoch - best_epoch >= 20:
+            if cfg.local_rank in [-1, 0]:
+                if early_stop:
                     cfg.logger.info(f"Best checkpoint at {best_epoch} epoch and stopped")
-                break
-        else:
-            if epoch >= cfg.TRAIN.EPOCHS:
-                break
+                else:
+                    cfg.logger.info(f"Best checkpoint at {epoch} epoch and stopped")
+            break
         
         epoch += 1
     if early_stop:

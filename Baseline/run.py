@@ -165,10 +165,10 @@ if __name__ == "__main__":
         res = {}
         best_valid_f1 = 0
         best_model, best_adapter_name, best_head_name = None, None, None
-        for lambda_disc in np.arange(0, 0.45, 0.05):
+        for lambda_disc in np.arange(2, 4, 0.05):
             cfg.TGT_LOSS.LAMBDA = lambda_disc
             valid_f1s, test_f1s = [], []
-            for seed in [13, 26, 42, 87, 100]:
+            for seed in [13, 42, 87]:
                 cfg.TRAIN.SEED = seed
                 model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
                 valid_f1s.append(valid_f1)
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
         cfg.TRAIN.TWO_STAGE = False
         cfg.ADAPTER.TRAIN = cfg.OUTPUT.ADAPTER_SAVE_DIR + "/biomedical_ner_bert-base-uncased_inter"
-        for seed in [13, 26, 87, 100]:
+        for seed in [13, 87]:
             cfg.TRAIN.SEED = seed
             model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
             if cfg.local_rank in [-1, 0]:

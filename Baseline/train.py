@@ -89,7 +89,7 @@ def train_two_stage(cfg, model, tokenizer):
     # train 4 src
     cfg.TRAIN.EPOCHS = cfg.TRAIN.SRC_EPOCHS
     if cfg.SRC_LOSS.NAME == "CE_MS":
-        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True, early_stop=False)
+        model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, use_ms=True, pretrain=True)
     elif cfg.TGT_LOSS.NAME == "CrossEntropy":
         model, _ = train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name, head_name, pretrain=True)
     else:
