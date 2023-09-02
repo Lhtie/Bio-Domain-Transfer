@@ -165,7 +165,7 @@ if __name__ == "__main__":
         res = {}
         best_valid_f1 = 0
         best_model, best_adapter_name, best_head_name = None, None, None
-        for lambda_disc in np.arange(2, 4, 0.05):
+        for lambda_disc in np.arange(0.2, 0.4, 0.05):
             cfg.TGT_LOSS.LAMBDA = lambda_disc
             valid_f1s, test_f1s = [], []
             for seed in [13, 42, 87]:
