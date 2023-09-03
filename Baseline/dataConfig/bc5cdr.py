@@ -14,7 +14,7 @@ from .base import BaseDataConfig
 from dataConfig.biomedical import biomedical
 from dataConfig.CrossNER import *
 
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/BioCreative-V-CDR-Corpus/CDR_Data/CDR_Data/CDR.Corpus.v010516"
+data_dir = "/root/autodl-tmp/datasets/BioCreative-V-CDR-Corpus/CDR_Data/CDR_Data/CDR.Corpus.v010516"
 split_dir = {
     "training": "CDR_TrainingSet.PubTator.txt", 
     "development": "CDR_DevelopmentSet.PubTator.txt", 

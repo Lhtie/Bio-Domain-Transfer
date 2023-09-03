@@ -10,7 +10,7 @@ from datasets import load_dataset, Dataset, DatasetDict
 
 from .biomedical_base import BiomedicalBaseDataConfig, Event
 
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/bionlp-st-2013-cg/original-data"
+data_dir = "/root/autodl-tmp/datasets/bionlp-st-2013-cg/original-data"
 emb_tp_path = "dataConfig/bioNLP/embedding_templates/cg_tp.json"
 split_dir = {
     "training": "train", 

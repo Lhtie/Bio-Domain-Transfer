@@ -1,6 +1,6 @@
 MODEL:
   BACKBONE: BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext
-  PATH: /mnt/data/oss_beijing/liuhongyi/models/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext
+  PATH: /root/autodl-tmp/models/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext
   
 ADAPTER:
   TRAIN: None

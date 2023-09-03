@@ -19,7 +19,33 @@ from train import train_two_stage, train_single
 from utils.trainer import get
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
 
-adapter_dir = "adapter/"
+def redirect_output_file(cfg, args):
+    suffix = ""
+    if args.method is not None:
+        if hasattr(cfg.DATA, "BIOMEDICAL"):
+            cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
+        if hasattr(cfg.DATA, "CROSSNER"):
+            cfg.DATA.CROSSNER.SIM_METHOD = args.method
+        suffix += f"/{args.method}"
+    if args.datasets is not None:
+        cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
+    if args.src_dataset is not None:
+        cfg.DATA.SRC_DATASET = args.src_dataset
+    if args.tgt_dataset is not None:
+        cfg.DATA.TGT_DATASET = args.tgt_dataset
+
+    if args.src_lambda is not None:
+        cfg.SRC_LOSS.LAMBDA = args.src_lambda
+        suffix += f"/src-lambda={args.src_lambda}"
+    if args.tgt_lambda is not None:
+        cfg.TGT_LOSS.LAMBDA = args.tgt_lambda
+        suffix += f"/tgt_lambda={args.tgt_lambda}"
+
+    suffix += f"/{cfg.DATA.SRC_DATASET}/{cfg.DATA.TGT_DATASET}"
+    cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix
+    cfg.OUTPUT.HEAD_SAVE_DIR = '/'.join(cfg.OUTPUT.HEAD_SAVE_DIR.split('/')[:-2]) + suffix
+    cfg.OUTPUT.RESULT_SAVE_DIR = '/'.join(cfg.OUTPUT.RESULT_SAVE_DIR.split('/')[:-2]) + suffix
+    return cfg
 
 def run(cfg):
     # reset random seed
@@ -67,10 +93,6 @@ def run(cfg):
                 references.append([data.id2label[id.item()] for mask, id in zip(label_mask, ref) if mask == 1])
 
         print(cfg.OUTPUT.RESULT_SAVE_DIR)
-        # if cfg.LOSSES.NAME == "CE_MS":
-        #     print("Lambda:", cfg.LOSSES.LAMBDA_DISC, cfg.LOSSES.LAMBDA_CLUS)
-        # if args.scale_pos_w is not None or args.scale_neg_w is not None:
-        #     print("MS Scale Weight:", args.scale_pos_w, args.scale_neg_w)
         print(f"Best f1 on validation: {best_f1}")
         seqeval = evaluate.load('evaluate-metric/seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
@@ -83,14 +105,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning_ms.yaml")
     parser.add_argument("--method", type=str, default=None)
-    parser.add_argument("--datasets", type=str, default=None)
-    parser.add_argument("--vanilla", default=False, action="store_true")
     parser.add_argument("--src_lambda", type=float, default=None)
     parser.add_argument("--tgt_lambda", type=float, default=None)
     parser.add_argument("--src_dataset", type=str, default=None)
+    parser.add_argument("--datasets", type=str, default=None)
     parser.add_argument("--tgt_dataset", type=str, default=None)
-    parser.add_argument("--scale_pos_w", type=float, default=None)
-    parser.add_argument("--scale_neg_w", type=float, default=None)
     parser.add_argument("--two_stage_train", default=False, action="store_true")
     parser.add_argument("--tune_tgt_ms", default=False, action="store_true")
     args = parser.parse_args()
@@ -128,38 +147,7 @@ if __name__ == "__main__":
     cfg.logger = logger
     cfg.logger.info(args)
 
-    suffix = ""
-    if args.vanilla:
-        cfg.LOSSES.MULTI_SIMILARITY_LOSS.VANILLA = True
-        suffix += "/vanilla"
-    if args.method is not None:
-        if hasattr(cfg.DATA, "BIOMEDICAL"):
-            cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
-        if hasattr(cfg.DATA, "CROSSNER"):
-            cfg.DATA.CROSSNER.SIM_METHOD = args.method
-        suffix += f"/{args.method}"
-    if args.datasets is not None:
-        cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
-    if args.src_dataset is not None:
-        cfg.DATA.SRC_DATASET = args.src_dataset
-    if args.tgt_dataset is not None:
-        cfg.DATA.TGT_DATASET = args.tgt_dataset
-
-    if args.src_lambda is not None:
-        cfg.SRC_LOSS.LAMBDA = args.src_lambda
-        suffix += f"/src-lambda={args.src_lambda}"
-    if args.tgt_lambda is not None:
-        cfg.TGT_LOSS.LAMBDA = args.tgt_lambda
-        suffix += f"/tgt_lambda={args.tgt_lambda}"
-    if args.scale_pos_w is not None and args.scale_neg_w is not None:
-        cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.SCALE_POS_WEIGHT = args.scale_pos_w
-        cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.SCALE_NEG_WEIGHT = args.scale_neg_w
-        suffix += f"/scale_w={args.scale_pos_w}-{args.scale_neg_w}"
-
-    suffix += f"/{cfg.DATA.SRC_DATASET}/{cfg.DATA.TGT_DATASET}"
-    cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix
-    cfg.OUTPUT.HEAD_SAVE_DIR = '/'.join(cfg.OUTPUT.HEAD_SAVE_DIR.split('/')[:-2]) + suffix
-    cfg.OUTPUT.RESULT_SAVE_DIR = '/'.join(cfg.OUTPUT.RESULT_SAVE_DIR.split('/')[:-2]) + suffix
+    cfg = redirect_output_file(cfg, args)
 
     if args.tune_tgt_ms:
         res = {}
@@ -205,23 +193,43 @@ if __name__ == "__main__":
             plt.savefig(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "disc_result.png"), dpi=300)
 
     elif args.two_stage_train:
-        valid_f1s, test_f1s = [], []
-        model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
-        if cfg.local_rank in [-1, 0]:   # seed 42
-            valid_f1s.append(valid_f1)
-            test_f1s.append(test_f1)
+        cfg.ADAPTER.TRAIN = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-1]) + "/biomedical_ner_bert-base-uncased_inter"
+        for lambda_eg in [0.2, 0.4, 0.8, 1.0, 1.2]:
+            args.src_lambda = lambda_eg
+            cfg = redirect_output_file(cfg, args)
 
-        cfg.TRAIN.TWO_STAGE = False
-        cfg.ADAPTER.TRAIN = cfg.OUTPUT.ADAPTER_SAVE_DIR + "/biomedical_ner_bert-base-uncased_inter"
-        for seed in [13, 87]:
-            cfg.TRAIN.SEED = seed
-            model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
+            res = {}
+            valid_f1s, test_f1s = [], []
+            if not os.path.exists(cfg.ADAPTER.TRAIN):
+                model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
+
+            cfg.TRAIN.TWO_STAGE = False
+            for seed in [42, 13, 87]:
+                cfg.TRAIN.SEED = seed
+                model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
+                if cfg.local_rank in [-1, 0]:
+                    valid_f1s.append(valid_f1)
+                    test_f1s.append(test_f1)
             if cfg.local_rank in [-1, 0]:
-                valid_f1s.append(valid_f1)
-                test_f1s.append(test_f1)
-        if cfg.local_rank in [-1, 0]:
-            print(f'{np.mean(valid_f1s)}, {np.mean(test_f1s)},')
-            print(f'{valid_f1s}, {test_f1s}')
+                print(f'{np.mean(valid_f1s)}, {np.mean(test_f1s)},')
+                print(f'{valid_f1s}, {test_f1s}')
+                res[lambda_eg] = [np.mean(valid_f1s), np.mean(test_f1s), valid_f1, test_f1]
+
+        with open(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "src_lambda.json"), "w") as f:
+            json.dump(res, f)
+
+        plt.clf()
+        plt.plot([float(x) for x in res.keys()], [float(x[0]) for x in res.values()], label="Validation")
+        plt.plot([float(x) for x in res.keys()], [float(x[1]) for x in res.values()], label="Test")
+        plt.axhline(float(list(res.values())[0][1]), linestyle='--', label="Direct Transfer")
+        plt.legend()
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel(r"F1 Score")
+
+        best = np.argmax([float(x[0]) for x in res.values()])
+        print(list(res.keys())[best], list(res.values())[best][0], list(res.values())[best][1])
+
+        plt.savefig(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
     
     else:
         run(cfg)

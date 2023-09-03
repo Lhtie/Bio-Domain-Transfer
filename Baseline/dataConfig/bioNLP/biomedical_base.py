@@ -13,13 +13,13 @@ from ..base import BaseDataConfig
 
 # Configuration
 eps = 1e-10
-sapbert_path = "/mnt/data/oss_beijing/liuhongyi/models/SapBERT-from-PubMedBERT-fulltext"
-sentbert_path = "/mnt/data/oss_beijing/liuhongyi/models/S-PubMedBert-MS-MARCO-SCIFACT"
-bert_path = "/mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased"
+sapbert_path = "/root/autodl-tmp/models/SapBERT-from-PubMedBERT-fulltext"
+sentbert_path = "/root/autodl-tmp/models/S-PubMedBert-MS-MARCO-SCIFACT"
+bert_path = "/root/autodl-tmp/models/bert-base-uncased"
 
 from sentence_transformers import SentenceTransformer, util
-sent_model = SentenceTransformer('all-MiniLM-L6-v2')
-# sent_model = SentenceTransformer(sentbert_path)
+# sent_model = SentenceTransformer('all-MiniLM-L6-v2')
+sent_model = SentenceTransformer(sentbert_path)
 
 class Event:
     arguments = ["Theme", "Cause", "Product", "Site"]
@@ -154,7 +154,7 @@ class BiomedicalBaseDataConfig(BaseDataConfig):
             print(f"Totally {len(entities)} entities to embed")
             model = EntityEncoder(sapbert_path, cache_dir=self.cache_dir)
             embs = model.get_embedding(entities)
-            embs_stacked = np.stack(embs.values())
+            embs_stacked = np.stack(list(embs.values()))
             mean = embs_stacked.mean(axis=0)
             cov = np.cov(embs_stacked, rowvar=False)
 

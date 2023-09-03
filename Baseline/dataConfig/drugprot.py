@@ -14,7 +14,7 @@ from .base import BaseDataConfig
 from dataConfig.biomedical import biomedical
 from dataConfig.CrossNER import *
 
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/drugprot-gs-training-development"
+data_dir = "/root/autodl-tmp/datasets/drugprot-gs-training-development"
 split_dir = {
     "training": "training/drugprot_training", 
     "development": "development/drugprot_development", 

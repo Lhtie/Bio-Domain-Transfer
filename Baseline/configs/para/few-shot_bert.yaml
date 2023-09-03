@@ -1,6 +1,6 @@
 MODEL:
   BACKBONE: bert-base-uncased
-  PATH: /mnt/data/oss_beijing/liuhongyi/models/bert-base-uncased
+  PATH: /root/autodl-tmp/models/bert-base-uncased
   
 ADAPTER:
   TRAIN: None

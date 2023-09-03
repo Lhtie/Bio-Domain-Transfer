@@ -14,7 +14,7 @@ from .base import BaseDataConfig
 from dataConfig.biomedical import biomedical
 from dataConfig.CrossNER import *
 
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/chemdner_corpus"
+data_dir = "/root/autodl-tmp/datasets/chemdner_corpus"
 letter_number = 'abcdefghijklmnopqrstuvwxyz0123456789'
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
