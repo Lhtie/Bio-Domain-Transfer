@@ -23,18 +23,15 @@ def get_dataset(cfg, type):
     if type == "chemdner":
         data = chemdner(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "chemdner_pse":
-        data = chemdner_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE, 
-                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+        data = chemdner_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "bc5cdr":
         data = bc5cdr(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "bc5cdr_pse":
-        data = bc5cdr_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE,
-                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+        data = bc5cdr_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "drugprot":
         data = drugprot(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "drugprot_pse":
-        data = drugprot_pse(read_config("configs/para/transfer_learning.yaml"), cfg.MODEL.BACKBONE,
-                            granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+        data = drugprot_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
     elif type in ["politics", "science", "music", "literature", "ai"]:

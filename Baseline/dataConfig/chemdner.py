@@ -111,10 +111,10 @@ class chemdner_pse(chemdner):
     def __init__(self, cfg, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, oracle=False):
         super().__init__(tokenizer_name, granularity, cache_dir, overwrite, oracle)
         self.cfg = cfg
-        self.cache_file += ".pse"
-        self.raw_cache_file += ".pse"
-        self.pseudo_label_file = os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, f"{self.ds_name}_pseudo_label.json")
-        os.makedirs(cfg.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+        os.makedirs(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, cache_dir), exist_ok=True)
+        self.cache_file = os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, self.cache_file + ".pse")
+        self.raw_cache_file = os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, self.raw_cache_file + ".pse")
+        self.pseudo_label_file = os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, cache_dir, f"{self.ds_name}_pseudo_label.json")
 
         if overwrite or not os.path.exists(self.cache_file) or not os.path.exists(self.raw_cache_file):
             self.init_pseudo_label()
@@ -150,21 +150,21 @@ class chemdner_pse(chemdner):
             with open(self.pseudo_label_file, "r") as f:
                 predictions = json.load(f)
         else:
-            if self.cfg.DATA.TGT_DATASET == "biomedical":
+            if self.cfg.DATA.SRC_DATASET == "biomedical":
                 src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY)
-            elif self.cfg.DATA.TGT_DATASET in ["politics", "science", "music", "literature", "ai"]:
-                src_data = globals()[self.cfg.DATA.TGT_DATASET](self.cfg, self.cfg.MODEL.BACKBONE)
+            elif self.cfg.DATA.SRC_DATASET in ["politics", "science", "music", "literature", "ai"]:
+                src_data = globals()[self.cfg.DATA.SRC_DATASET](self.cfg, self.cfg.MODEL.BACKBONE)
             else:
-                raise NotImplementedError(f"dataset {self.cfg.DATA.TGT_DATASET} is not supported")
+                raise NotImplementedError(f"dataset {self.cfg.DATA.SRC_DATASET} is not supported")
             dataset = self.load(tokenizer)
             dataloader = torch.utils.data.DataLoader(dataset["training"], batch_size=self.cfg.EVAL.BATCH_SIZE)
 
-            adapter_name = self.cfg.DATA.TGT_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE
-            head_name = self.cfg.DATA.TGT_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE + "_head"
+            adapter_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE
+            head_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE + "_head"
             model = AutoAdapterModel.from_pretrained(model_name)
-            model.load_adapter(os.path.join(self.cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
+            model.load_adapter(os.path.join(os.path.dirname(self.cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"))
             model.set_active_adapters([adapter_name])
-            model.load_head(os.path.join(self.cfg.OUTPUT.HEAD_SAVE_DIR, head_name + "_inter"))
+            model.load_head(os.path.join(os.path.dirname(self.cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"))
 
             model.to(device).eval()
             predictions, references = [], []

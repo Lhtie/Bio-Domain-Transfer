@@ -27,7 +27,7 @@ class biomedical(BaseDataConfig):
         self.sim_method = None
 
         if hasattr(cfg.DATA, "BIOMEDICAL"):
-            if hasattr(cfg.DATA.BIOMEDICAL, "DATASETS"):
+            if hasattr(cfg.DATA.BIOMEDICAL, "DATASETS") and cfg.DATA.BIOMEDICAL.DATASETS != "None":
                 self.dataset_names = cfg.DATA.BIOMEDICAL.DATASETS
             if hasattr(cfg.DATA.BIOMEDICAL, "SIM_METHOD"):
                 self.sim_method = cfg.DATA.BIOMEDICAL.SIM_METHOD

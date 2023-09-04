@@ -95,10 +95,10 @@ def train_two_stage(cfg, model, tokenizer):
     else:
         raise NotImplemented
     if cfg.local_rank in [-1, 0]:
-        os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), exist_ok=True)
-        os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name + "_inter"), exist_ok=True)
-        get(cfg, model).save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"), adapter_name)
-        get(cfg, model).save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name + "_inter"), head_name)
+        os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), exist_ok=True)
+        os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), exist_ok=True)
+        get(cfg, model).save_adapter(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), adapter_name)
+        get(cfg, model).save_head(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), head_name)
         cfg.logger.info("Best model for the 1st stage saved")
 
     # prepare for target
@@ -106,7 +106,7 @@ def train_two_stage(cfg, model, tokenizer):
     train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, False)
 
     model = AutoAdapterModel.from_pretrained(cfg.MODEL.PATH)
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name + "_inter"))
+    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, os.pardir, adapter_name + "_inter"))
     head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
     model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label, overwrite_ok=True)
     model.train_adapter([adapter_name])

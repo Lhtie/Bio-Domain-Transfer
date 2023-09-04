@@ -4,19 +4,26 @@ MODEL:
   
 ADAPTER:
   TRAIN: None
-  EVAL: biomedical_ner_bert-base-uncased
+  EVAL: None
 
 DATA:
-  SRC_DATASET: tl
-  TGT_DATASET: biomedical
+  SRC_DATASET: biomedical
+  BIOMEDICAL:
+    SIM_METHOD: None
+    DATASETS: None
+  TGT_DATASET: chemdner
   GRANULARITY: para
 
 TRAIN:
-  TGT_EPOCHS: 100
-  BATCH_SIZE: 64
+  SRC_EPOCHS: 100
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
   LR: 0.0001
   ORACLE: False
-  TWO_STAGE: False
+  TWO_STAGE: True
+  SEED: 42
 
 EVAL:
   OVERWRITE: True
@@ -29,6 +36,6 @@ TGT_LOSS:
   NAME: CrossEntropy
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/tl/biomedical
-  HEAD_SAVE_DIR: head/para/tl/biomedical
-  RESULT_SAVE_DIR: results/para/tl/biomedical
+  ADAPTER_SAVE_DIR: adapter/para/tl
+  HEAD_SAVE_DIR: head/para/tl
+  RESULT_SAVE_DIR: results/para/tl

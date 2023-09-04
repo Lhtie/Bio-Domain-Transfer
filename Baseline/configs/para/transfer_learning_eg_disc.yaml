@@ -3,13 +3,14 @@ MODEL:
   PATH: /root/autodl-tmp/models/bert-base-uncased
   
 ADAPTER:
-  TRAIN: adapter/para/eg/concat-max/src-lambda=1.2/biomedical/chemdner/biomedical_ner_bert-base-uncased_inter
-  EVAL: biomedical_ner_bert-base-uncased
+  TRAIN: None
+  EVAL: None
 
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
     SIM_METHOD: concat-max
+    DATASETS: None
   TGT_DATASET: chemdner_pse
   GRANULARITY: para
 
@@ -45,6 +46,6 @@ TGT_LOSS:
     SCALE_NEG: 5.0
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/eg/concat-max/disc/biomedical/chemdner_pse
-  HEAD_SAVE_DIR: head/para/eg/concat-max/disc/biomedical/chemdner_pse
-  RESULT_SAVE_DIR: results/para/eg/concat-max/disc/biomedical/chemdner_pse
+  ADAPTER_SAVE_DIR: adapter/para/eg
+  HEAD_SAVE_DIR: head/para/eg
+  RESULT_SAVE_DIR: results/para/eg

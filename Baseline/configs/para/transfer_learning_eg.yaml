@@ -4,12 +4,13 @@ MODEL:
   
 ADAPTER:
   TRAIN: None
-  EVAL: biomedical_ner_bert-base-uncased
+  EVAL: None
 
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
     SIM_METHOD: concat-max
+    DATASETS: None
   TGT_DATASET: chemdner
   GRANULARITY: para
 
@@ -42,6 +43,6 @@ TGT_LOSS:
   NAME: CrossEntropy
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/eg/biomedical/chemdner
-  HEAD_SAVE_DIR: head/para/eg/biomedical/chemdner
-  RESULT_SAVE_DIR: results/para/eg/biomedical/chemdner
+  ADAPTER_SAVE_DIR: adapter/para/eg
+  HEAD_SAVE_DIR: head/para/eg
+  RESULT_SAVE_DIR: results/para/eg

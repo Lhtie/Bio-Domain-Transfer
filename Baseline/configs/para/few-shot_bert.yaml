@@ -7,7 +7,6 @@ ADAPTER:
   EVAL: None
 
 DATA:
-  SRC_DATASET: fs
   TGT_DATASET: chemdner
   GRANULARITY: para
 
@@ -26,6 +25,6 @@ TGT_LOSS:
   NAME: CrossEntropy
 
 OUTPUT:
-  ADAPTER_SAVE_DIR: adapter/para/fs/chemdner
-  HEAD_SAVE_DIR: head/para/fs/chemdner
-  RESULT_SAVE_DIR: results/para/fs/chemdner
+  ADAPTER_SAVE_DIR: adapter/para/fs
+  HEAD_SAVE_DIR: head/para/fs
+  RESULT_SAVE_DIR: results/para/fs

@@ -19,32 +19,37 @@ from train import train_two_stage, train_single
 from utils.trainer import get
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
 
-def redirect_output_file(cfg, args):
-    suffix = ""
+def modify_configs(cfg, args):
     if args.method is not None:
-        if hasattr(cfg.DATA, "BIOMEDICAL"):
-            cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
-        if hasattr(cfg.DATA, "CROSSNER"):
-            cfg.DATA.CROSSNER.SIM_METHOD = args.method
-        suffix += f"/{args.method}"
+        cfg.DATA.BIOMEDICAL.SIM_METHOD = args.method
     if args.datasets is not None:
         cfg.DATA.BIOMEDICAL.DATASETS = args.datasets.split('-')
     if args.src_dataset is not None:
         cfg.DATA.SRC_DATASET = args.src_dataset
     if args.tgt_dataset is not None:
         cfg.DATA.TGT_DATASET = args.tgt_dataset
-
     if args.src_lambda is not None:
         cfg.SRC_LOSS.LAMBDA = args.src_lambda
-        suffix += f"/src-lambda={args.src_lambda}"
     if args.tgt_lambda is not None:
         cfg.TGT_LOSS.LAMBDA = args.tgt_lambda
-        suffix += f"/tgt_lambda={args.tgt_lambda}"
-
-    suffix += f"/{cfg.DATA.SRC_DATASET}/{cfg.DATA.TGT_DATASET}"
-    cfg.OUTPUT.ADAPTER_SAVE_DIR = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-2]) + suffix
-    cfg.OUTPUT.HEAD_SAVE_DIR = '/'.join(cfg.OUTPUT.HEAD_SAVE_DIR.split('/')[:-2]) + suffix
-    cfg.OUTPUT.RESULT_SAVE_DIR = '/'.join(cfg.OUTPUT.RESULT_SAVE_DIR.split('/')[:-2]) + suffix
+        
+    suffix = ""
+    if hasattr(cfg.DATA, "BIOMEDICAL") and hasattr(cfg.DATA.BIOMEDICAL, "SIM_METHOD"):
+        if cfg.DATA.BIOMEDICAL.SIM_METHOD != "None":
+            suffix += f"/{cfg.DATA.BIOMEDICAL.SIM_METHOD}"
+    if hasattr(cfg.SRC_LOSS, "LAMBDA"):
+        suffix += f"/src-lambda={cfg.DATA.BIOMEDICAL.SIM_METHOD}"
+    if hasattr(cfg.DATA, "SRC_DATASET"):
+        suffix += f"/{cfg.DATA.SRC_DATASET}"
+        if hasattr(cfg.DATA, "BIOMEDICAL") and hasattr(cfg.DATA.BIOMEDICAL, "DATASETS"):
+            if cfg.DATA.BIOMEDICAL.DATASETS != "None":
+                ds = '_'.join(cfg.DATA.BIOMEDICAL.DATASETS)
+                suffix += "_" + ds
+    suffix += f"/{cfg.DATA.TGT_DATASET}"
+    
+    cfg.OUTPUT.ADAPTER_SAVE_DIR += suffix
+    cfg.OUTPUT.HEAD_SAVE_DIR += suffix
+    cfg.OUTPUT.RESULT_SAVE_DIR += suffix
     return cfg
 
 def run(cfg):
@@ -97,21 +102,21 @@ def run(cfg):
         seqeval = evaluate.load('evaluate-metric/seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
         print(results)
-        return model, adapter_name, head_name, best_f1, results['overall_f1']
+        return model, adapter_name, head_name, best_f1, results['overall_f1'], results['overall_precision'], results['overall_recall']
     else:
-        return None, None, None, 0, 0
+        return None, None, None, 0, 0, 0, 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning_ms.yaml")
+    parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning.yaml")
     parser.add_argument("--method", type=str, default=None)
     parser.add_argument("--src_lambda", type=float, default=None)
     parser.add_argument("--tgt_lambda", type=float, default=None)
     parser.add_argument("--src_dataset", type=str, default=None)
     parser.add_argument("--datasets", type=str, default=None)
     parser.add_argument("--tgt_dataset", type=str, default=None)
-    parser.add_argument("--two_stage_train", default=False, action="store_true")
-    parser.add_argument("--tune_tgt_ms", default=False, action="store_true")
+    parser.add_argument("--tune_src", default=False, action="store_true")
+    parser.add_argument("--tune_tgt", default=False, action="store_true")
     args = parser.parse_args()
 
     cfg = read_config(args.cfg_file)
@@ -147,89 +152,110 @@ if __name__ == "__main__":
     cfg.logger = logger
     cfg.logger.info(args)
 
-    cfg = redirect_output_file(cfg, args)
-
-    if args.tune_tgt_ms:
+    if args.tune_tgt:
         res = {}
-        best_valid_f1 = 0
-        best_model, best_adapter_name, best_head_name = None, None, None
-        for lambda_disc in np.arange(0.2, 0.4, 0.05):
-            cfg.TGT_LOSS.LAMBDA = lambda_disc
-            valid_f1s, test_f1s = [], []
+        for lambda_disc in np.concatenate([[0], np.arange(0.2, 0.4, 0.05)]):
+            args.tgt_lambda = lambda_disc
+            cfg_m = modify_configs(copy.deepcopy(cfg), args)
+            cfg_m.ADAPTER.TRAIN = os.path.join(
+                os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+            )
+            valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
             for seed in [13, 42, 87]:
-                cfg.TRAIN.SEED = seed
-                model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
+                cfg_m.TRAIN.SEED = seed
+                model, adapter_name, head_name, valid_f1, test_f1, test_prec, test_rec = run(cfg_m)
                 valid_f1s.append(valid_f1)
                 test_f1s.append(test_f1)
-            if cfg.local_rank in [-1, 0]:
-                res[lambda_disc] = [np.mean(valid_f1s), np.mean(test_f1s), valid_f1s, test_f1s]
-                if best_model is None or best_valid_f1 < np.mean(valid_f1s):
-                    best_valid_f1 = np.mean(valid_f1s)
-                    best_model = model
-                    best_adapter_name = adapter_name
-                    best_head_name = head_name
+                test_precs.append(test_prec)
+                test_recs.append(test_rec)
+            if cfg_m.local_rank in [-1, 0]:
+                res[lambda_disc] = {
+                    "validation": [
+                        np.mean(valid_f1s),
+                        valid_f1s
+                    ],
+                    "test": {
+                        "prec": [np.mean(test_precs), np.std(test_precs), test_precs],
+                        "rec": [np.mean(test_recs), np.std(test_recs), test_recs],
+                        "f1": [np.mean(test_f1s), np.std(test_f1s), test_f1s]
+                    }
+                }
 
-        if cfg.local_rank in [-1, 0]:
-            os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, best_adapter_name), exist_ok=True)
-            os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, best_head_name), exist_ok=True)
-            os.makedirs(cfg.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
-            best_model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, best_adapter_name), best_adapter_name)
-            best_model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, best_head_name), best_head_name)
-            cfg.logger.info("Best model saved")
-            with open(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.json"), "w") as f:
+        if cfg_m.local_rank in [-1, 0]:
+            os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+            with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.json"), "w") as f:
                 json.dump(res, f)
 
             plt.clf()
-            plt.plot([float(x) for x in res.keys()], [float(x[0]) for x in res.values()], label="Validation")
-            plt.plot([float(x) for x in res.keys()], [float(x[1]) for x in res.values()], label="Test")
-            plt.axhline(float(list(res.values())[0][1]), linestyle='--', label="Direct Transfer")
+            plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
+            plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
+            plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
             plt.legend()
             plt.xlabel(r"$\lambda$")
             plt.ylabel(r"F1 Score")
 
-            best = np.argmax([float(x[0]) for x in res.values()])
-            print(list(res.keys())[best], list(res.values())[best][0], list(res.values())[best][1])
+            plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.png"), dpi=300)
 
-            plt.savefig(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "disc_result.png"), dpi=300)
-
-    elif args.two_stage_train:
-        cfg.ADAPTER.TRAIN = '/'.join(cfg.OUTPUT.ADAPTER_SAVE_DIR.split('/')[:-1]) + "/biomedical_ner_bert-base-uncased_inter"
+    elif args.tune_src:
+        res = {}
         for lambda_eg in [0.2, 0.4, 0.8, 1.0, 1.2]:
-            args.src_lambda = lambda_eg
-            cfg = redirect_output_file(cfg, args)
-
-            res = {}
-            valid_f1s, test_f1s = [], []
-            if not os.path.exists(cfg.ADAPTER.TRAIN):
-                model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
-
-            cfg.TRAIN.TWO_STAGE = False
-            for seed in [42, 13, 87]:
-                cfg.TRAIN.SEED = seed
-                model, adapter_name, head_name, valid_f1, test_f1 = run(cfg)
-                if cfg.local_rank in [-1, 0]:
+            args.tgt_lambda = lambda_eg
+            cfg_m = modify_configs(copy.deepcopy(cfg), args)
+            cfg_m.ADAPTER.TRAIN = os.path.join(
+                os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+            )
+            
+            valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
+            if not os.path.exists(cfg_m.ADAPTER.TRAIN):
+                cfg_m.TRAIN.SEED = 42
+                model, adapter_name, head_name, valid_f1, test_f1, test_prec, test_rec = run(cfg_m)
+                if cfg_m.local_rank in [-1, 0]:
                     valid_f1s.append(valid_f1)
                     test_f1s.append(test_f1)
-            if cfg.local_rank in [-1, 0]:
-                print(f'{np.mean(valid_f1s)}, {np.mean(test_f1s)},')
-                print(f'{valid_f1s}, {test_f1s}')
-                res[lambda_eg] = [np.mean(valid_f1s), np.mean(test_f1s), valid_f1, test_f1]
+                    test_precs.append(test_prec)
+                    test_recs.append(test_rec)
+                seeds = [13, 87]
+            else:
+                seeds = [42, 13, 87]
 
-        with open(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "src_lambda.json"), "w") as f:
-            json.dump(res, f)
+            cfg_m.TRAIN.TWO_STAGE = False
+            for seed in seeds:
+                cfg_m.TRAIN.SEED = seed
+                model, adapter_name, head_name, valid_f1, test_f1, test_prec, test_rec = run(cfg_m)
+                if cfg_m.local_rank in [-1, 0]:
+                    valid_f1s.append(valid_f1)
+                    test_f1s.append(test_f1)
+                    test_precs.append(test_prec)
+                    test_recs.append(test_rec)
+            if cfg_m.local_rank in [-1, 0]:
+                res[lambda_eg] = {
+                    "validation": [
+                        np.mean(valid_f1s),
+                        valid_f1s
+                    ],
+                    "test": {
+                        "prec": [np.mean(test_precs), np.std(test_precs), test_precs],
+                        "rec": [np.mean(test_recs), np.std(test_recs), test_recs],
+                        "f1": [np.mean(test_f1s), np.std(test_f1s), test_f1s]
+                    }
+                }
 
-        plt.clf()
-        plt.plot([float(x) for x in res.keys()], [float(x[0]) for x in res.values()], label="Validation")
-        plt.plot([float(x) for x in res.keys()], [float(x[1]) for x in res.values()], label="Test")
-        plt.axhline(float(list(res.values())[0][1]), linestyle='--', label="Direct Transfer")
-        plt.legend()
-        plt.xlabel(r"$\lambda$")
-        plt.ylabel(r"F1 Score")
+        if cfg_m.local_rank in [-1, 0]:
+            os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+            with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.json"), "w") as f:
+                json.dump(res, f)
 
-        best = np.argmax([float(x[0]) for x in res.values()])
-        print(list(res.keys())[best], list(res.values())[best][0], list(res.values())[best][1])
+            plt.clf()
+            plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
+            plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
+            plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
+            plt.legend()
+            plt.xlabel(r"$\lambda$")
+            plt.ylabel(r"F1 Score")
 
-        plt.savefig(os.path.join(cfg.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
+            plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
     
     else:
-        run(cfg)
+        run(modify_configs(cfg, args))
