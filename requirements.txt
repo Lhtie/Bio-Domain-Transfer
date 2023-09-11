@@ -2,6 +2,7 @@ torch
 torchvision
 torchaudio
 transformers
+adapter-transformers
 datasets
 nltk
 evaluate
