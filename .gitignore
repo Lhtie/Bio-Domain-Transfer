@@ -1,11 +1,8 @@
-Adapter-Merge/.cache
-Adapter-Merge/adapter
-Adapter-Merge/head
-Adapter-Merge/results
-Baseline/.cache
-Baseline/adapter
-Baseline/head
-Baseline/results
-Baseline/analysis
+.cache
+adapter
+head
+results
+analysis
 nohup.out
+run_script.sh
 __pycache__

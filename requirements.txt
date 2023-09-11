@@ -1,0 +1,12 @@
+torch
+torchvision
+torchaudio
+transformers
+datasets
+nltk
+evaluate
+seqeval
+sentence_transformers
+matplotlib
+seaborn
+scikit-learn

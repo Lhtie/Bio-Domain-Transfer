@@ -16,7 +16,7 @@ from dataConfig.chemdner import chemdner
 
 openai.api_key_path = "./openai_api_key"
 rpm = 60
-data_dir = "/mnt/data/oss_beijing/liuhongyi/datasets/chemdner_corpus"
+data_dir = ""
 output_file = "./results/chatgpt_chemdner.json"
 template = [
     "Description: In this task, you are given a small paragraph of a PubMed article, and your task is to identify all the named entities (particular chemical related entity) from the given input and also provide type of the each entity according to structure-associated chemical entity mention classes (ABBREVIATION, IDENTIFIER, FORMULA, SYSTEMATIC, MULTIPLE, TRIVIAL, FAMILY). Specifically, the paragraph are given with seperate tokens and you need to list all the chemical named entities in order and also tag their types. Generate the output in this format: entity1 <type_of_entity1>, entity2 <type_of_entity2>.",
