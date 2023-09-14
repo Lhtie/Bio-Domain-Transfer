@@ -4,9 +4,9 @@ import random
 import numpy as np
 import torch
 
-from dataConfig.chemdner import chemdner, chemdner_pse
-from dataConfig.bc5cdr import bc5cdr, bc5cdr_pse
-from dataConfig.drugprot import drugprot, drugprot_pse
+from dataConfig.chemdner import chemdner, chemdner_pse, chemdner_cls
+from dataConfig.bc5cdr import bc5cdr, bc5cdr_pse, bc5cdr_cls
+from dataConfig.drugprot import drugprot, drugprot_pse, drugprot_cls
 from dataConfig.biomedical import biomedical
 
 class Config:
@@ -23,14 +23,26 @@ def get_dataset(cfg, type):
         data = chemdner(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "chemdner_pse":
         data = chemdner_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "chemdner_pse_no_ms":
+        data = chemdner_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE, use_ms=False)
+    elif type == "chemdner_cls":
+        data = chemdner_cls(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "bc5cdr":
         data = bc5cdr(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "bc5cdr_pse":
         data = bc5cdr_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "bc5cdr_pse_no_ms":
+        data = bc5cdr_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE, use_ms=False)
+    elif type == "bc5cdr_cls":
+        data = bc5cdr_cls(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "drugprot":
         data = drugprot(cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "drugprot_pse":
         data = drugprot_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
+    elif type == "drugprot_pse_no_ms":
+        data = drugprot_pse(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE, use_ms=False)
+    elif type == "drugprot_cls":
+        data = drugprot_cls(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
     else:

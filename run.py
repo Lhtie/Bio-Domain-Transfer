@@ -100,6 +100,10 @@ def run(cfg):
             for label_mask, pred, ref in zip(batch["label_mask"], preds, batch["labels"]):
                 predictions.append([data.id2label[id.item()] for mask, id in zip(label_mask, pred) if mask == 1])
                 references.append([data.id2label[id.item()] for mask, id in zip(label_mask, ref) if mask == 1])
+                
+        # clear OOD
+        for idx, pred in enumerate(predictions):
+            predictions[idx] = ["O" if p.endswith("OOD") else p for p in pred]
 
         print(cfg.OUTPUT.RESULT_SAVE_DIR)
         print(f"Best f1 on validation: {best_f1}")
@@ -117,6 +121,59 @@ def run(cfg):
         return model, adapter_name, head_name, best_f1, results['overall_f1'], results['overall_precision'], results['overall_recall']
     else:
         return None, None, None, 0, 0, 0, 0
+    
+def ensemble(cfg):
+    # reset random seed
+    set_seed(cfg.TRAIN.SEED)
+
+    # load model
+    model_name = cfg.MODEL.PATH
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    
+    model = AutoAdapterModel.from_pretrained(model_name)
+    cfg_m = copy.deepcopy(cfg)
+    cfg_m.DATA.TGT_DATASET = cfg.DATA.TGT_DATASET.split('_')[0]
+    model, _, _, best_f1, _ = train_single(cfg_m, model, tokenizer)
+    
+    # reset random seed
+    set_seed(cfg.TRAIN.SEED)
+    
+    classifier = AutoAdapterModel.from_pretrained(model_name)
+    classifier, _, _, _, _ = train_single(cfg, classifier, tokenizer)
+
+    if cfg.local_rank in [-1, 0]:
+        data = get_tgt_dataset(cfg_m)
+        dataset = data.load(tokenizer)
+        print(dataset)
+        dataloader = torch.utils.data.DataLoader(dataset["evaluation"], batch_size=cfg.EVAL.BATCH_SIZE)
+        
+        # predict
+        model.to(cfg.device).eval()
+        classifier.to(cfg.device).eval()
+        predictions, references = [], []
+        for batch in tqdm(dataloader):
+            batch = {k: v.to(cfg.device) for k, v in batch.items()}
+
+            with torch.no_grad():
+                preds = model(batch["input_ids"]).logits
+                preds = preds.detach().cpu().numpy()
+                preds = np.argmax(preds, axis=2)
+                
+                clses = classifier(batch["input_ids"]).logits
+                clses = clses.detach().cpu().numpy()
+                clses = np.argmax(clses, axis=2)
+            
+            for label_mask, pred, ref, cls in zip(batch["label_mask"], preds, batch["labels"], clses):
+                predictions.append([data.id2label[id.item()] if c < 3 else "O" for mask, id, c in zip(label_mask, pred, cls) if mask == 1])
+                references.append([data.id2label[id.item()] for mask, id in zip(label_mask, ref) if mask == 1])
+                
+        seqeval = evaluate.load('evaluate-metric/seqeval')
+        results = seqeval.compute(predictions=predictions, references=references)
+        print(results)
+        
+        return best_f1, results['overall_f1'], results['overall_precision'], results['overall_recall']
+    else:
+        return 0, 0, 0, 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -131,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("--tgt_dataset", type=str, default=None)
     parser.add_argument("--tune_src", default=False, action="store_true")
     parser.add_argument("--tune_tgt", default=False, action="store_true")
+    parser.add_argument("--ensemble", default=False, action="store_true")
     args = parser.parse_args()
 
     cfg = read_config(args.cfg_file)
@@ -168,7 +226,8 @@ if __name__ == "__main__":
 
     if args.tune_tgt:
         res = {}
-        for lambda_disc in np.concatenate([[0], np.arange(0.2, 0.4, 0.05)]):
+        arange = np.arange(0.10, 0.35, 0.05)
+        for lambda_disc in np.concatenate([[0], arange]):
             args.tgt_lambda = lambda_disc
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
@@ -272,4 +331,32 @@ if __name__ == "__main__":
             plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
     
     else:
-        run(modify_configs(cfg, args))
+        valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
+        for seed in [42, 8, 13]:
+            args.seed = seed
+            cfg_m = modify_configs(copy.deepcopy(cfg), args)
+            if args.ensemble:
+                valid_f1, test_f1, test_prec, test_rec = ensemble(cfg_m)
+            else:
+                model, adapter_name, head_name, valid_f1, test_f1, test_prec, test_rec = run(cfg_m)
+            if cfg_m.local_rank in [-1, 0]:
+                valid_f1s.append(valid_f1)
+                test_f1s.append(test_f1)
+                test_precs.append(test_prec)
+                test_recs.append(test_rec)
+                
+        if cfg_m.local_rank in [-1, 0]:
+            os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+            res = {
+                "validation": [
+                    np.mean(valid_f1s),
+                    valid_f1s
+                ],
+                "test": {
+                    "prec": [np.mean(test_precs), np.std(test_precs), test_precs],
+                    "rec": [np.mean(test_recs), np.std(test_recs), test_recs],
+                    "f1": [np.mean(test_f1s), np.std(test_f1s), test_f1s]
+                }
+            }
+            with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "avg.json"), "w") as f:
+                json.dump(res, f, indent=4)

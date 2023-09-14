@@ -1,0 +1,41 @@
+MODEL:
+  BACKBONE: bert-base-uncased
+  PATH: /root/autodl-tmp/models/bert-base-uncased
+  
+ADAPTER:
+  TRAIN: adapter/para/tl/biomedical/biomedical_ner_bert-base-uncased_inter
+  EVAL: None
+
+DATA:
+  SRC_DATASET: biomedical
+  BIOMEDICAL:
+    SIM_METHOD: None
+    DATASETS: None
+  TGT_DATASET: chemdner_pse_no_ms
+  GRANULARITY: para
+
+TRAIN:
+  SRC_EPOCHS: 100
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
+  LR: 0.0001
+  ORACLE: False
+  TWO_STAGE: False
+  SEED: 42
+
+EVAL:
+  OVERWRITE: True
+  BATCH_SIZE: 128
+
+SRC_LOSS:
+  NAME: CrossEntropy
+
+TGT_LOSS:
+  NAME: CrossEntropy
+
+OUTPUT:
+  ADAPTER_SAVE_DIR: adapter/para/tl
+  HEAD_SAVE_DIR: head/para/tl
+  RESULT_SAVE_DIR: results/para/tl

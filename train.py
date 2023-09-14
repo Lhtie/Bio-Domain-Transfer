@@ -49,7 +49,7 @@ def train_single(cfg, model, tokenizer):
     # add adapter
     adapter_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE
     head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
-    if cfg.ADAPTER.TRAIN != "None":
+    if cfg.ADAPTER.TRAIN != "None" and os.path.exists(cfg.ADAPTER.TRAIN):
         with open(os.path.join(cfg.ADAPTER.TRAIN, "adapter_config.json"), "r") as f:
             config = json.load(f)
         adapter_name = config["name"]

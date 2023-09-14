@@ -6,3 +6,4 @@ analysis
 nohup.out
 run_script.sh
 __pycache__
+t-SNE.py
