@@ -19,7 +19,7 @@ datasets = {
 }
 
 class biomedical(BaseDataConfig):
-    def __init__(self, cfg, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False):
+    def __init__(self, cfg, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, auto=False):
         self.dataset_names = list(datasets.keys())
         self.datasets = []
         self.sim_method = None
@@ -34,12 +34,12 @@ class biomedical(BaseDataConfig):
 
         for key, val in datasets.items():
             if key in self.dataset_names:
-                self.datasets.append(val(tokenizer_name, granularity, cache_dir, overwrite, retain_chem, self.sim_method))
+                self.datasets.append(val(tokenizer_name, granularity, cache_dir, overwrite, retain_chem, self.sim_method, auto))
 
         if retain_chem:
             cache_dir = os.path.join(cache_dir, "retain_chem")
         super().__init__(
-            "BIOMEDICAL_" + "_".join(self.dataset_names), 
+            "BIOMEDICAL_" + "_".join(self.dataset_names) + ("_auto" if auto else ""), 
             tokenizer_name, 
             granularity, 
             cache_dir, 

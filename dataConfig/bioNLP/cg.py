@@ -12,6 +12,7 @@ from ..config import dataset_dir
 from .biomedical_base import BiomedicalBaseDataConfig, Event
 
 data_dir = os.path.join(dataset_dir, "bionlp-st-2013-cg/original-data")
+auto_data_dir = os.path.join(dataset_dir, "bionlp-st-2013-cg_auto/original-data")
 emb_tp_path = "dataConfig/bioNLP/embedding_templates/cg_tp.json"
 split_dir = {
     "training": "train", 
@@ -20,11 +21,12 @@ split_dir = {
 }
 
 class cg(BiomedicalBaseDataConfig):
-    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, sim_method=None):
+    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, sim_method=None, auto=False):
         if retain_chem:
             cache_dir = os.path.join(cache_dir, "retain_chem")
         self.retain_chem = retain_chem
-        super().__init__("CancerGenetics", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
+        self.auto = auto
+        super().__init__("CancerGenetics" + ("_auto" if auto else ""), tokenizer_name, granularity, cache_dir, overwrite, sim_method)
 
         self.labels = [ 
             'O', 'B-Simple_chemical', 'I-Simple_chemical', 'B-Organism', 'I-Organism', 'B-Organism_subdivision', 'I-Organism_subdivision', 'B-Anatomical_system', 'I-Anatomical_system', 'B-Organ', 'I-Organ', 'B-Multi-tissue_structure', 'I-Multi-tissue_structure', 'B-Tissue', 'I-Tissue', 'B-Developing_anatomical_structure', 'I-Developing_anatomical_structure', 'B-Cell', 'I-Cell', 'B-Cellular_component', 'I-Cellular_component', 'B-Organism_substance', 'I-Organism_substance', 'B-Immaterial_anatomical_entity', 'I-Immaterial_anatomical_entity', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Protein_domain_or_region', 'I-Protein_domain_or_region', 'B-Amino_acid', 'I-Amino_acid', 'B-DNA_domain_or_region', 'I-DNA_domain_or_region', 'B-Pathological_formation', 'I-Pathological_formation', 'B-Cancer', 'I-Cancer'
@@ -155,7 +157,7 @@ class cg(BiomedicalBaseDataConfig):
         with open(emb_tp_path, "r") as f:
             self.emb_tp = json.load(f)
         for split, s_dir in split_dir.items():
-            self.read_from_file(os.path.join(data_dir, s_dir), split)
+            self.read_from_file(os.path.join(data_dir if not self.auto else auto_data_dir, s_dir), split)
     
     def load_dataset(self, tokenizer=None):
         dataset = DatasetDict()

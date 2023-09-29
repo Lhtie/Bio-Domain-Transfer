@@ -165,6 +165,8 @@ class drugprot_pse(drugprot):
         else:
             if self.cfg.DATA.SRC_DATASET == "biomedical":
                 src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY)
+            elif self.cfg.DATA.SRC_DATASET == "biomedical_auto":
+                src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY, auto=True)
             else:
                 raise NotImplementedError(f"dataset {self.cfg.DATA.SRC_DATASET} is not supported")
             dataset = self.load(tokenizer)
@@ -277,6 +279,8 @@ class drugprot_cls(drugprot):
         else:
             if self.cfg.DATA.SRC_DATASET == "biomedical":
                 src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY)
+            elif self.cfg.DATA.SRC_DATASET == "biomedical_auto":
+                src_data = biomedical(self.cfg, self.cfg.MODEL.BACKBONE, granularity=self.cfg.DATA.GRANULARITY, auto=True)
             else:
                 raise NotImplementedError(f"dataset {self.cfg.DATA.SRC_DATASET} is not supported")
             dataset = self.load(tokenizer)

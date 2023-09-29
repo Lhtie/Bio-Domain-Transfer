@@ -20,10 +20,16 @@ if __name__ == "__main__":
 
     data = get_tgt_dataset(cfg)
     if cfg.ADAPTER.EVAL == "None":
-        adapter_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE
+        adapter_file = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE
     else:
-        adapter_name = cfg.ADAPTER.EVAL
-    head_name = cfg.DATA.TGT_DATASET + f"_ner_{cfg.MODEL.BACKBONE}_head"
+        adapter_file = cfg.ADAPTER.EVAL
+    with open(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_file, "adapter_config.json"), "r") as f:
+            config = json.load(f)
+    adapter_name = config["name"]
+    if cfg.HEAD.EVAL == "None":
+        head_file = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
+    else:
+        head_file = cfg.HEAD.EVAL
 
     # load model
     model_name = cfg.MODEL.PATH
@@ -32,12 +38,12 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # load adapter
-    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name))
+    model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_file))
     model.set_active_adapters([adapter_name])
     # print(model.adapter_summary())
 
     # load head
-    model.load_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name))
+    model.load_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_file))
 
     # load data
     dataset = data.load(tokenizer)

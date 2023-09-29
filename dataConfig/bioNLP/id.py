@@ -12,6 +12,7 @@ from ..config import dataset_dir
 from .biomedical_base import BiomedicalBaseDataConfig, Event
 
 data_dir = os.path.join(dataset_dir, "bionlp-st-2011-id/original-data")
+auto_data_dir = os.path.join(dataset_dir, "bionlp-st-2011-id_auto/original-data")
 emb_tp_path = "dataConfig/bioNLP/embedding_templates/id_tp.json"
 split_dir = {
     "training": "train", 
@@ -20,11 +21,12 @@ split_dir = {
 }
 
 class id(BiomedicalBaseDataConfig):
-    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, sim_method=None):
+    def __init__(self, tokenizer_name, granularity="para", cache_dir=".cache/", overwrite=False, retain_chem=False, sim_method=None, auto=False):
         if retain_chem:
             cache_dir = os.path.join(cache_dir, "retain_chem")
         self.retain_chem = retain_chem
-        super().__init__("InfectiousDiseases", tokenizer_name, granularity, cache_dir, overwrite, sim_method)
+        self.auto = auto
+        super().__init__("InfectiousDiseases" + ("_auto" if auto else ""), tokenizer_name, granularity, cache_dir, overwrite, sim_method)
 
         self.labels = [ 
             'O', 'B-Chemical', 'I-Chemical', 'B-Gene_or_gene_product', 'I-Gene_or_gene_product', 'B-Two-component_systems', 'I-Two-component_systems', 'B-Organism', 'I-Organism', 'B-Regulon-operon', 'I-Regulon-operon', 'B-Protein', 'I-Protein'
@@ -143,7 +145,7 @@ class id(BiomedicalBaseDataConfig):
         with open(emb_tp_path, "r") as f:
             self.emb_tp = json.load(f)
         for split, s_dir in split_dir.items():
-            self.read_from_file(os.path.join(data_dir, s_dir), split)
+            self.read_from_file(os.path.join(data_dir if not self.auto else auto_data_dir, s_dir), split)
 
     def load_dataset(self, tokenizer=None):
         dataset = DatasetDict()

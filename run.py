@@ -107,7 +107,8 @@ def run(cfg):
 
         print(cfg.OUTPUT.RESULT_SAVE_DIR)
         print(f"Best f1 on validation: {best_f1}")
-        seqeval = evaluate.load('evaluate-metric/seqeval')
+        # seqeval = evaluate.load('evaluate-metric/seqeval')
+        seqeval = evaluate.load('../seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
         print(results)
         
@@ -227,7 +228,7 @@ if __name__ == "__main__":
     if args.tune_tgt:
         res = {}
         arange = np.arange(0.10, 0.35, 0.05)
-        for lambda_disc in np.concatenate([[0], arange]):
+        for lambda_disc in arange: #np.concatenate([[0], arange]):
             args.tgt_lambda = lambda_disc
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
@@ -332,9 +333,14 @@ if __name__ == "__main__":
     
     else:
         valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
-        for seed in [42, 8, 13]:
+        for seed in [42, 87, 13]:
             args.seed = seed
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
+            if hasattr(cfg_m.DATA, "SRC_DATASET"):
+                cfg_m.ADAPTER.TRAIN = os.path.join(
+                    os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                    cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+                )
             if args.ensemble:
                 valid_f1, test_f1, test_prec, test_rec = ensemble(cfg_m)
             else:

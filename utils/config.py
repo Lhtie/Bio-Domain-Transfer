@@ -45,6 +45,8 @@ def get_dataset(cfg, type):
         data = drugprot_cls(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, oracle=cfg.TRAIN.ORACLE)
     elif type == "biomedical":
         data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY)
+    elif type == "biomedical_auto":
+        data = biomedical(cfg, cfg.MODEL.BACKBONE, granularity=cfg.DATA.GRANULARITY, auto=True)
     else:
         raise NotImplementedError(f"dataset {cfg.DATA.SRC_DATASET} is not supported")
     return data
