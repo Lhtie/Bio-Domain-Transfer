@@ -129,32 +129,22 @@ class drugprot_pse(drugprot):
             self.label2id = {label: id_ for id_, label in enumerate(self.labels)}
 
     def add_pseudo_tag(self, batch):
+        tokens = []
         pse_tags = [0] * len(batch['tokens'])
         ner_tags = batch['ner_tags']
-        
-        tokens = []
-        last_pse = "O"
-        valid = True
         for col, (token, token_id, tag, pse) in enumerate(zip(batch['tokens'], batch['token_id'], batch['ner_tags'], batch['pse_labels'])):
             if tag == 0:
-                # discard I- token when detecting sth wrong
-                if pse.startswith("I-") and (last_pse == "O" or last_pse[2:] != pse[2:]):
-                    valid = False
-                
                 if pse.startswith("B-"):
                     if len(tokens) > 0:
                         self.etts.append(' '.join(tokens))
                         tokens = []
-                    valid = True
-                
-                if valid and pse != "O":
+                if pse != "O":
                     tokens.append(token)
                     batch['token_id'][col] = len(self.etts)
                     if self.use_ms:
                         pse_tags[col] = 1 + (pse.startswith("I-"))
                     else:
                         ner_tags[col] = len(self.labels) + (pse.startswith("I-"))
-            last_pse = self.labels[tag] if tag > 0 else pse
                         
         if len(tokens) > 0:
             self.etts.append(' '.join(tokens))
@@ -181,7 +171,7 @@ class drugprot_pse(drugprot):
                 raise NotImplementedError(f"dataset {self.cfg.DATA.SRC_DATASET} is not supported")
             dataset = self.load(tokenizer)
             dataloader = {}
-            for split in ["training", "development"]:
+            for split in ["training", "development", "evaluation"]:
                 dataloader[split] = torch.utils.data.DataLoader(dataset[split], batch_size=self.cfg.EVAL.BATCH_SIZE)
 
             adapter_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE
@@ -193,7 +183,7 @@ class drugprot_pse(drugprot):
 
             model.to(device).eval()
             predictions = {}
-            for split in ["training", "development"]:
+            for split in ["training", "development", "evaluation"]:
                 predictions[split] = []
                 for batch in tqdm(dataloader[split]):
                     batch = {k: v.to(device) for k, v in batch.items()}
@@ -211,7 +201,7 @@ class drugprot_pse(drugprot):
 
         # tokenize
         dataset = self.load_dataset(tokenizer)
-        for split in ["training", "development"]:
+        for split in ["training", "development", "evaluation"]:
             dataset[split] = dataset[split].add_column("pse_labels", predictions[split])
             dataset[split] = dataset[split].map(self.add_pseudo_tag, batched=False)
         dataset = dataset.map(self.encode_labels, fn_kwargs={'tokenizer': tokenizer})

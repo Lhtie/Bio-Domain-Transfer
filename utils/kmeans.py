@@ -3,6 +3,26 @@ import numpy as np
 from sklearn.cluster import KMeans
 from joblib import Parallel, delayed
 
+def scaled_inertia(feats, labels):
+    '''
+    Parameters 
+    ----------
+    feats: numpy array 
+        scaled data. rows are samples and columns are features for clustering
+    labels: list
+        cluster of each sample
+    Returns 
+    -------
+    inertia: float
+    '''
+    types = list(set(labels))
+    centroid = {}
+    for t in types:
+        centroid[t] = np.mean(feats[np.array(labels) == t], axis=0)
+    inertia = np.sum([np.square(feat - centroid[label]).sum() for (feat, label) in zip(feats, labels)])
+    inertia_o = np.square((feats - feats.mean(axis=0))).sum()
+    return inertia / inertia_o
+
 # copy from https://towardsdatascience.com/an-approach-for-choosing-number-of-clusters-for-k-means-c28e614ecb2c
 
 def kMeansRes(scaled_data, k, alpha_k=0.02):

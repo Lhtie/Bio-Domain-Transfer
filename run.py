@@ -333,7 +333,11 @@ if __name__ == "__main__":
     
     else:
         valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
-        for seed in [42, 87, 13]:
+        if args.seed is not None:
+            seeds = [args.seed]
+        else:
+            seeds = [13, 42, 87]
+        for seed in seeds:
             args.seed = seed
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             if hasattr(cfg_m.DATA, "SRC_DATASET"):
