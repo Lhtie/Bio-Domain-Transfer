@@ -7,3 +7,4 @@ nohup.out
 run_script.sh
 __pycache__
 t-SNE.py
+select_ex.py

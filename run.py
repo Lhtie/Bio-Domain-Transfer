@@ -36,6 +36,8 @@ def modify_configs(cfg, args):
         cfg.SRC_LOSS.LAMBDA = args.src_lambda
     if args.tgt_lambda is not None:
         cfg.TGT_LOSS.LAMBDA = args.tgt_lambda
+    if args.src_vanilla:
+        cfg.SRC_LOSS.MULTI_SIMILARITY_LOSS.VANILLA = True
         
     suffix = ""
     if hasattr(cfg.DATA, "BIOMEDICAL") and hasattr(cfg.DATA.BIOMEDICAL, "SIM_METHOD"):
@@ -184,6 +186,7 @@ if __name__ == "__main__":
     parser.add_argument("--method", type=str, default=None)
     parser.add_argument("--src_lambda", type=float, default=None)
     parser.add_argument("--tgt_lambda", type=float, default=None)
+    parser.add_argument("--src_vanilla", default=False, action="store_true")
     parser.add_argument("--src_dataset", type=str, default=None)
     parser.add_argument("--datasets", type=str, default=None)
     parser.add_argument("--tgt_dataset", type=str, default=None)
@@ -273,7 +276,7 @@ if __name__ == "__main__":
 
     elif args.tune_src:
         res = {}
-        for lambda_eg in [1.2]:
+        for lambda_eg in [0.6, 0.8, 1.0, 1.2, 1.4]:
             args.src_lambda = lambda_eg
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
