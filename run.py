@@ -22,6 +22,7 @@ from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
 def modify_configs(cfg, args):
     if args.model_path is not None:
         cfg.MODEL.PATH = args.model_path
+        cfg.MODEL.BACKBONE = args.model_path.split("/")[-1]
     if args.seed is not None:
         cfg.TRAIN.SEED = args.seed
     if args.method is not None:
@@ -276,7 +277,7 @@ if __name__ == "__main__":
 
     elif args.tune_src:
         res = {}
-        for lambda_eg in [0.6, 0.8, 1.0, 1.2, 1.4]:
+        for lambda_eg in [1.2]:
             args.src_lambda = lambda_eg
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
@@ -339,7 +340,7 @@ if __name__ == "__main__":
         if args.seed is not None:
             seeds = [args.seed]
         else:
-            seeds = [13, 42, 87]
+            seeds = [42, 13, 87]
         for seed in seeds:
             args.seed = seed
             cfg_m = modify_configs(copy.deepcopy(cfg), args)

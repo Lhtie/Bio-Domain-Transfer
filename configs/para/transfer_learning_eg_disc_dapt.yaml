@@ -1,0 +1,51 @@
+MODEL:
+  BACKBONE: bert-base-uncased
+  PATH: /root/autodl-tmp/models/bert-base-uncased
+  
+ADAPTER:
+  TRAIN: None
+  EVAL: None
+
+DATA:
+  SRC_DATASET: biomedical
+  BIOMEDICAL:
+    SIM_METHOD: concat-max
+    DATASETS: None
+  TGT_DATASET: chemdner_pse
+  GRANULARITY: para
+
+TRAIN:
+  SRC_EPOCHS: 100
+  TGT_EPOCHS: 80
+  SRC_BATCH_SIZE: 64
+  BATCH_SIZE: 16
+  SRC_LR: 0.0001
+  LR: 0.0001
+  ORACLE: False
+  TWO_STAGE: False
+  SEED: 42
+
+EVAL:
+  OVERWRITE: True
+  BATCH_SIZE: 128
+
+SRC_LOSS:
+  NAME: CE_MS
+  LAMBDA: 1.2
+  MULTI_SIMILARITY_LOSS:
+    SCALE_POS: 4.0
+    SCALE_NEG: 3.0
+    SCALE_POS_WEIGHT: 8.0
+    SCALE_NEG_WEIGHT: 6.0
+
+TGT_LOSS:
+  NAME: CE_MS
+  LAMBDA: 0.1
+  MULTI_SIMILARITY_LOSS:
+    SCALE_POS: 2.0
+    SCALE_NEG: 5.0
+
+OUTPUT:
+  ADAPTER_SAVE_DIR: adapter/para/eg/dapt
+  HEAD_SAVE_DIR: head/para/eg/dapt
+  RESULT_SAVE_DIR: results/para/eg/dapt
