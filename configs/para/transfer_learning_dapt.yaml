@@ -1,6 +1,6 @@
 MODEL:
-  BACKBONE: bert-base-uncased
-  PATH: /root/autodl-tmp/models/bert-base-uncased
+  BACKBONE: DAPT_chemdner
+  PATH: /root/autodl-tmp/models/DAPT_chemdner
   
 ADAPTER:
   TRAIN: None

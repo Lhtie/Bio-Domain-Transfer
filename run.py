@@ -110,8 +110,8 @@ def run(cfg):
 
         print(cfg.OUTPUT.RESULT_SAVE_DIR)
         print(f"Best f1 on validation: {best_f1}")
-        # seqeval = evaluate.load('evaluate-metric/seqeval')
-        seqeval = evaluate.load('../seqeval')
+        seqeval = evaluate.load('evaluate-metric/seqeval')
+        # seqeval = evaluate.load('../seqeval')
         results = seqeval.compute(predictions=predictions, references=references)
         print(results)
         
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     if args.tune_tgt:
         res = {}
         arange = np.arange(0.10, 0.35, 0.05)
-        for lambda_disc in arange: #np.concatenate([[0], arange]):
+        for lambda_disc in arange:
             args.tgt_lambda = lambda_disc
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
@@ -259,25 +259,24 @@ if __name__ == "__main__":
                         "f1": [np.mean(test_f1s), np.std(test_f1s), test_f1s]
                     }
                 }
+                
+                os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+                with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.json"), "w") as f:
+                    json.dump(res, f, indent=4)
 
-        if cfg_m.local_rank in [-1, 0]:
-            os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
-            with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.json"), "w") as f:
-                json.dump(res, f, indent=4)
+                plt.clf()
+                plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
+                plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
+                plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
+                plt.legend()
+                plt.xlabel(r"$\lambda$")
+                plt.ylabel(r"F1 Score")
 
-            plt.clf()
-            plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
-            plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
-            plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
-            plt.legend()
-            plt.xlabel(r"$\lambda$")
-            plt.ylabel(r"F1 Score")
-
-            plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.png"), dpi=300)
+                plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "tgt_disc.png"), dpi=300)
 
     elif args.tune_src:
         res = {}
-        for lambda_eg in [1.2]:
+        for lambda_eg in [0.6, 0.8, 1.0, 1.2, 1.4]:
             args.src_lambda = lambda_eg
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             cfg_m.ADAPTER.TRAIN = os.path.join(
@@ -320,20 +319,19 @@ if __name__ == "__main__":
                     }
                 }
 
-        if cfg_m.local_rank in [-1, 0]:
-            os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
-            with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.json"), "w") as f:
-                json.dump(res, f, indent=4)
+                os.makedirs(cfg_m.OUTPUT.RESULT_SAVE_DIR, exist_ok=True)
+                with open(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.json"), "w") as f:
+                    json.dump(res, f, indent=4)
 
-            plt.clf()
-            plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
-            plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
-            plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
-            plt.legend()
-            plt.xlabel(r"$\lambda$")
-            plt.ylabel(r"F1 Score")
-
-            plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
+                plt.clf()
+                plt.plot([float(x) for x in res.keys()], [float(x["validation"][0]) for x in res.values()], label="Validation")
+                plt.plot([float(x) for x in res.keys()], [float(x["test"]["f1"][0]) for x in res.values()], label="Test")
+                plt.axhline(float(list(res.values())[0]["test"]["f1"][0]), linestyle='--', label="Direct Transfer")
+                plt.legend()
+                plt.xlabel(r"$\lambda$")
+                plt.ylabel(r"F1 Score")
+                
+                plt.savefig(os.path.join(cfg_m.OUTPUT.RESULT_SAVE_DIR, "src_lambda.png"), dpi=300)
     
     else:
         valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []

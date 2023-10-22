@@ -1,13 +1,13 @@
 MODEL:
-  BACKBONE: bert-base-uncased
-  PATH: /root/autodl-tmp/models/DAPT_drugprot
+  BACKBONE: DAPT_chemdner
+  PATH: /root/autodl-tmp/models/DAPT_chemdner
   
 ADAPTER:
   TRAIN: None
   EVAL: None
 
 DATA:
-  TGT_DATASET: drugprot
+  TGT_DATASET: chemdner
   GRANULARITY: para
 
 TRAIN:
