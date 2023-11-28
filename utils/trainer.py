@@ -84,8 +84,7 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
                 )
                 outputs = get(cfg, model).forward_head(
                     (outputs[0],) + outputs[2:],
-                    head_name=head_name,
-                    pooled_output=outputs[1]
+                    head_name=head_name
                 )
 
             # we need to reformat the tensors for the loss function
@@ -144,8 +143,7 @@ def train(cfg, model, tokenizer, train_dataloader, dev_dataloader, adapter_name,
                     outputs = model(batch["input_ids"])
                     preds = get(cfg, model).forward_head(
                         (outputs[0],) + outputs[2:],
-                        head_name=head_name,
-                        pooled_output=outputs[1]
+                        head_name=head_name
                     )[0]
                 else:
                     preds = model(batch["input_ids"]).logits

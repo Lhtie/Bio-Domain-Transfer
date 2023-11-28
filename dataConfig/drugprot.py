@@ -14,6 +14,10 @@ from .config import dataset_dir
 from .base import BaseDataConfig
 from dataConfig.biomedical import biomedical
 
+import sys
+sys.path.append("..")
+from utils.modeling import BertForTokenClassification
+
 data_dir = os.path.join(dataset_dir, "drugprot-gs-training-development")
 split_dir = {
     "training": "training/drugprot_training", 
@@ -176,10 +180,13 @@ class drugprot_pse(drugprot):
 
             adapter_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE
             head_name = self.cfg.DATA.SRC_DATASET + "_ner_" + self.cfg.MODEL.BACKBONE + "_head"
-            model = AutoAdapterModel.from_pretrained(model_name)
-            model.load_adapter(os.path.join(os.path.dirname(self.cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"))
-            model.set_active_adapters([adapter_name])
-            model.load_head(os.path.join(os.path.dirname(self.cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"))
+            if self.cfg.ADAPTER.ENABLE:
+                model = AutoAdapterModel.from_pretrained(model_name)
+                model.load_adapter(os.path.join(os.path.dirname(self.cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"))
+                model.set_active_adapters([adapter_name])
+                model.load_head(os.path.join(os.path.dirname(self.cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"))
+            else:
+                model = BertForTokenClassification.from_pretrained(os.path.join(os.path.dirname(self.cfg.OUTPUT.ADAPTER_SAVE_DIR), "inter"))
 
             model.to(device).eval()
             predictions = {}

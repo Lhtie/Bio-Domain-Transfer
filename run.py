@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from train import train_two_stage, train_single
 from utils.trainer import get
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
+from utils.modeling import BertForTokenClassification
 
 def modify_configs(cfg, args):
     if args.model_path is not None:
@@ -72,10 +73,13 @@ def run(cfg):
     else:
         model, adapter_name, head_name, best_f1, valid_f1s = train_two_stage(cfg, model, tokenizer)
     if cfg.local_rank in [-1, 0]:
-        os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
-        os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
-        model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), adapter_name)
-        model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), head_name)
+        if cfg.ADAPTER.ENABLE:
+            os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
+            os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
+            model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), adapter_name)
+            model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), head_name)
+        else:
+            model.save_pretrained(cfg.OUTPUT.ADAPTER_SAVE_DIR)
         cfg.logger.info("Best model saved")
 
     if cfg.local_rank in [-1, 0]:
@@ -84,10 +88,13 @@ def run(cfg):
         print(dataset)
         dataloader = torch.utils.data.DataLoader(dataset["evaluation"], batch_size=cfg.EVAL.BATCH_SIZE)
 
-        model = AutoAdapterModel.from_pretrained(model_name)
-        model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name))
-        model.set_active_adapters([adapter_name])
-        model.load_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name))
+        if cfg.ADAPTER.ENABLE:
+            model = AutoAdapterModel.from_pretrained(model_name)
+            model.load_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name))
+            model.set_active_adapters([adapter_name])
+            model.load_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name))
+        else:
+            model = BertForTokenClassification.from_pretrained(cfg.OUTPUT.ADAPTER_SAVE_DIR)
         
         # predict
         model.to(cfg.device).eval()
@@ -183,6 +190,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_file", type=str, default="configs/para/transfer_learning.yaml")
     parser.add_argument("--model_path", type=str, default=None)
+    parser.add_argument("--full_model", default=False, action="store_true")
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--method", type=str, default=None)
     parser.add_argument("--src_lambda", type=float, default=None)
@@ -214,6 +222,8 @@ if __name__ == "__main__":
     if not hasattr(cfg.TRAIN, "SEED"):
         cfg.TRAIN.SEED = 42
     set_seed(cfg.TRAIN.SEED)
+    if args.full_model:
+        cfg.ADAPTER.ENABLE = False
 
     # initialize distributed process group
     if local_rank !=- 1:
@@ -235,10 +245,13 @@ if __name__ == "__main__":
         for lambda_disc in arange:
             args.tgt_lambda = lambda_disc
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
-            cfg_m.ADAPTER.TRAIN = os.path.join(
-                os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
-                cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
-            )
+            if cfg_m.ADAPTER.ENABLE:
+                cfg_m.ADAPTER.TRAIN = os.path.join(
+                    os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                    cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+                )
+            else:
+                cfg_m.ADAPTER.TRAIN = os.path.join(os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR), "inter")
             valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
             for seed in [13, 42, 87]:
                 cfg_m.TRAIN.SEED = seed
@@ -276,13 +289,17 @@ if __name__ == "__main__":
 
     elif args.tune_src:
         res = {}
-        for lambda_eg in [0.6, 0.8, 1.0, 1.2, 1.4]:
+        for lambda_eg in [1.2]:
             args.src_lambda = lambda_eg
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
-            cfg_m.ADAPTER.TRAIN = os.path.join(
-                os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
-                cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
-            )
+            if cfg_m.ADAPTER.ENABLE:
+                cfg_m.ADAPTER.TRAIN = os.path.join(
+                    os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                    cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+                )
+            else:
+                cfg_m.ADAPTER.TRAIN = os.path.join(os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR), "inter")
+            cfg_m.ADAPTER.TRAIN = os.path.join(os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR), "inter")
             
             valid_f1s, test_f1s, test_precs, test_recs = [], [], [], []
             if not os.path.exists(cfg_m.ADAPTER.TRAIN):
@@ -343,10 +360,13 @@ if __name__ == "__main__":
             args.seed = seed
             cfg_m = modify_configs(copy.deepcopy(cfg), args)
             if hasattr(cfg_m.DATA, "SRC_DATASET"):
-                cfg_m.ADAPTER.TRAIN = os.path.join(
-                    os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
-                    cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
-                )
+                if cfg_m.ADAPTER.ENABLE:
+                    cfg_m.ADAPTER.TRAIN = os.path.join(
+                        os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR),
+                        cfg_m.DATA.SRC_DATASET + "_ner_" + cfg_m.MODEL.BACKBONE + "_inter"
+                    )
+                else:
+                    cfg_m.ADAPTER.TRAIN = os.path.join(os.path.dirname(cfg_m.OUTPUT.ADAPTER_SAVE_DIR), "inter")
             if args.ensemble:
                 valid_f1, test_f1, test_prec, test_rec = ensemble(cfg_m)
             else:

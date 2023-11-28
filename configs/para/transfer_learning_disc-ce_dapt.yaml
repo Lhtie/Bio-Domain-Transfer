@@ -5,6 +5,7 @@ MODEL:
 ADAPTER:
   TRAIN: adapter/para/tl/biomedical/biomedical_ner_DAPT_chemdner_inter
   EVAL: None
+  ENABLE: True
 
 DATA:
   SRC_DATASET: biomedical

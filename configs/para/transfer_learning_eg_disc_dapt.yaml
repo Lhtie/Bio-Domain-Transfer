@@ -5,6 +5,7 @@ MODEL:
 ADAPTER:
   TRAIN: None
   EVAL: None
+  ENABLE: True
 
 DATA:
   SRC_DATASET: biomedical

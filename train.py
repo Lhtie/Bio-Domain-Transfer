@@ -15,6 +15,7 @@ import json
 
 from utils.trainer import get, train
 from utils.config import read_config, get_tgt_dataset, get_src_dataset, set_seed
+from utils.modeling import BertForTokenClassification
 
 adapter_dir = "adapter/"
 
@@ -50,14 +51,23 @@ def train_single(cfg, model, tokenizer):
     adapter_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE
     head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
     if cfg.ADAPTER.TRAIN != "None" and os.path.exists(cfg.ADAPTER.TRAIN):
-        with open(os.path.join(cfg.ADAPTER.TRAIN, "adapter_config.json"), "r") as f:
-            config = json.load(f)
-        adapter_name = config["name"]
-        model.load_adapter(cfg.ADAPTER.TRAIN)
+        if cfg.ADAPTER.ENABLE:
+            with open(os.path.join(cfg.ADAPTER.TRAIN, "adapter_config.json"), "r") as f:
+                config = json.load(f)
+            adapter_name = config["name"]
+            model.load_adapter(cfg.ADAPTER.TRAIN)
+        else:
+            model = BertForTokenClassification.from_pretrained(cfg.ADAPTER.TRAIN)
     else:
-        model.add_adapter(adapter_name)
-    model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
-    model.train_adapter([adapter_name])
+        if cfg.ADAPTER.ENABLE:
+            model.add_adapter(adapter_name)
+        else:
+            model = BertForTokenClassification.from_pretrained(cfg.MODEL.PATH, num_labels=len(data.labels), id2label=data.id2label)
+    if cfg.ADAPTER.ENABLE:
+        model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
+        model.train_adapter([adapter_name])
+    else:
+        model.train()
     model.to(cfg.device)
 
     # train
@@ -77,9 +87,13 @@ def train_two_stage(cfg, model, tokenizer):
     # add adapter
     adapter_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE
     head_name = cfg.DATA.SRC_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
-    model.add_adapter(adapter_name)
-    model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
-    model.train_adapter([adapter_name])
+    if cfg.ADAPTER.ENABLE:
+        model.add_adapter(adapter_name)
+        model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label)
+        model.train_adapter([adapter_name])
+    else:
+        model = BertForTokenClassification.from_pretrained(cfg.MODEL.PATH, num_labels=len(data.labels), id2label=data.id2label)
+        model.train()
     model.to(cfg.device)
 
     # train 4 src
@@ -91,21 +105,28 @@ def train_two_stage(cfg, model, tokenizer):
     else:
         raise NotImplemented
     if cfg.local_rank in [-1, 0]:
-        os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), exist_ok=True)
-        os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), exist_ok=True)
-        model.save_adapter(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), adapter_name)
-        model.save_head(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), head_name)
+        if cfg.ADAPTER.ENABLE:
+            os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), exist_ok=True)
+            os.makedirs(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), exist_ok=True)
+            model.save_adapter(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"), adapter_name)
+            model.save_head(os.path.join(os.path.dirname(cfg.OUTPUT.HEAD_SAVE_DIR), head_name + "_inter"), head_name)
+        else:
+            model.save_pretrained(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), "inter"))
         cfg.logger.info("Best model for the 1st stage saved")
 
     # prepare for target
     set_seed(cfg.TRAIN.SEED)
     train_dataloader, dev_dataloader, data = get_dataloaders(cfg, tokenizer, False)
 
-    model = AutoAdapterModel.from_pretrained(cfg.MODEL.PATH)
-    model.load_adapter(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"))
-    head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
-    model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label, overwrite_ok=True)
-    model.train_adapter([adapter_name])
+    if cfg.ADAPTER.ENABLE:
+        model = AutoAdapterModel.from_pretrained(cfg.MODEL.PATH)
+        model.load_adapter(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), adapter_name + "_inter"))
+        head_name = cfg.DATA.TGT_DATASET + "_ner_" + cfg.MODEL.BACKBONE + "_head"
+        model.add_tagging_head(head_name, num_labels=len(data.labels), id2label=data.id2label, overwrite_ok=True)
+        model.train_adapter([adapter_name])
+    else:
+        model = BertForTokenClassification.from_pretrained(os.path.join(os.path.dirname(cfg.OUTPUT.ADAPTER_SAVE_DIR), "inter"))
+        model.train()
     model.to(cfg.device)
 
     # train 4 tgt
@@ -167,8 +188,11 @@ if __name__ == "__main__":
         model, adapter_name, head_name, best_f1, valid_f1s = train_two_stage(cfg, model, tokenizer)
 
     if cfg.local_rank in [-1, 0]:
-        os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
-        os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
-        model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), adapter_name)
-        model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), head_name)
+        if cfg.ADAPTER.ENABLE:
+            os.makedirs(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), exist_ok=True)
+            os.makedirs(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), exist_ok=True)
+            model.save_adapter(os.path.join(cfg.OUTPUT.ADAPTER_SAVE_DIR, adapter_name), adapter_name)
+            model.save_head(os.path.join(cfg.OUTPUT.HEAD_SAVE_DIR, head_name), head_name)
+        else:
+            model.save_pretrained(cfg.OUTPUT.ADAPTER_SAVE_DIR)
         cfg.logger.info("Best model saved")
