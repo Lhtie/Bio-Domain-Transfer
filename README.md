@@ -4,7 +4,7 @@ Accepted by NAACL 2024
 
 ## Overview
 
-![](https://github.com/Lhtie/Bio-Domain-Transfer/blob/master/img/overview.pdf)
+![overview](img/overview.pdf)
 
 # Requirements
 
