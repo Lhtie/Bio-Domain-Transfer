@@ -1,0 +1,18 @@
+{
+    "sourceFile": "dataConfig/config.py",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1711868057243,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1711868057243,
+            "name": "Commit-0",
+            "content": "dataset_dir = \"PATH_TO_DATASETS\"\n\neps = 1e-10\nsapbert_path = \"PATH_TO_SAPBERT_MODEL\"\nsentbert_path = \"PATH_TO_SENTBERT_MODEL\"\nbert_path = \"PATH_TO_BERT_MODEL\""
+        }
+    ]
+}

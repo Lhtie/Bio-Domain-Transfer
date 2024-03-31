@@ -1,0 +1,26 @@
+{
+    "sourceFile": "configs/para/transfer_learning_eg_disc.yaml",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1711870302613,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1711870516336,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,9 @@\n \n DATA:\n   SRC_DATASET: biomedical\n   BIOMEDICAL:\n-    SIM_METHOD: None\n+    SIM_METHOD: concat-max/sentEnc-max\n     DATASETS: None\n   TGT_DATASET: chemdner_pse\n   GRANULARITY: para\n \n"
+                },
+                {
+                    "date": 1711870550600,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,7 +1,7 @@\n MODEL:\n   BACKBONE: bert-base-uncased\n-  PATH: /root/autodl-tmp/models/bert-base-uncased\n+  PATH: PATH_TO_BERT\n   \n ADAPTER:\n   TRAIN: None\n   EVAL: None\n"
+                }
+            ],
+            "date": 1711870302613,
+            "name": "Commit-0",
+            "content": "MODEL:\n  BACKBONE: bert-base-uncased\n  PATH: /root/autodl-tmp/models/bert-base-uncased\n  \nADAPTER:\n  TRAIN: None\n  EVAL: None\n  ENABLE: True\n\nDATA:\n  SRC_DATASET: biomedical\n  BIOMEDICAL:\n    SIM_METHOD: None\n    DATASETS: None\n  TGT_DATASET: chemdner_pse\n  GRANULARITY: para\n\nTRAIN:\n  SRC_EPOCHS: 100\n  TGT_EPOCHS: 80\n  SRC_BATCH_SIZE: 64\n  BATCH_SIZE: 16\n  SRC_LR: 0.0001\n  LR: 0.0001\n  ORACLE: False\n  TWO_STAGE: False\n  SEED: 42\n\nEVAL:\n  OVERWRITE: True\n  BATCH_SIZE: 128\n\nSRC_LOSS:\n  NAME: CE_MS\n  LAMBDA: 1.2\n  MULTI_SIMILARITY_LOSS:\n    SCALE_POS: 4.0\n    SCALE_NEG: 3.0\n    SCALE_POS_WEIGHT: 8.0\n    SCALE_NEG_WEIGHT: 6.0\n\nTGT_LOSS:\n  NAME: CE_MS\n  LAMBDA: 0.1\n  MULTI_SIMILARITY_LOSS:\n    SCALE_POS: 2.0\n    SCALE_NEG: 5.0\n\nOUTPUT:\n  ADAPTER_SAVE_DIR: adapter/para/eg\n  HEAD_SAVE_DIR: head/para/eg\n  RESULT_SAVE_DIR: results/para/eg"
+        }
+    ]
+}

@@ -1,6 +1,6 @@
 MODEL:
   BACKBONE: bert-base-uncased
-  PATH: /root/autodl-tmp/models/bert-base-uncased
+  PATH: PATH_TO_BERT
   
 ADAPTER:
   TRAIN: None
@@ -10,7 +10,7 @@ ADAPTER:
 DATA:
   SRC_DATASET: biomedical
   BIOMEDICAL:
-    SIM_METHOD: None
+    SIM_METHOD: concat-max/sentEnc-max
     DATASETS: None
   TGT_DATASET: chemdner
   GRANULARITY: para

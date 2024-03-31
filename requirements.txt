@@ -6,5 +6,6 @@ evaluate
 seqeval
 sentence_transformers
 matplotlib
+scipy
 seaborn
 scikit-learn

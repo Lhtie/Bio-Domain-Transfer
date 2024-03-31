@@ -1,6 +1,6 @@
 MODEL:
   BACKBONE: bert-base-uncased
-  PATH: /root/autodl-tmp/models/bert-base-uncased
+  PATH: PATH_TO_BERT
   
 ADAPTER:
   TRAIN: adapter/para/tl/biomedical/biomedical_ner_bert-base-uncased_inter
