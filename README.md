@@ -4,7 +4,7 @@ Accepted by NAACL 2024
 
 ## Overview
 
-![overview](img/overview.pdf)
+![](img/overview.png)
 
 # Requirements
 
