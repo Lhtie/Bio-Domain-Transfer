@@ -1,6 +1,6 @@
 # Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences  
 
-Accepted by NAACL 2024
+Accepted by NAACL 2024 Main Conference, [Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences](https://aclanthology.org/2024.naacl-long.1.pdf)
 
 ## Overview
 
@@ -106,13 +106,23 @@ python eval.py --cfg_file <configuration file>
 ### Citation
 
 ```
-@misc{liu2024tagging,
-      title={Name Tagging Under Domain Shift via Metric Learning for Life Sciences}, 
-      author={Hongyi Liu and Qingyun Wang and Payam Karisani and Heng Ji},
-      year={2024},
-      eprint={2401.10472},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+@inproceedings{liu-etal-2024-named,
+    title = "Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences",
+    author = "Liu, Hongyi  and
+      Wang, Qingyun  and
+      Karisani, Payam  and
+      Ji, Heng",
+    editor = "Duh, Kevin  and
+      Gomez, Helena  and
+      Bethard, Steven",
+    booktitle = "Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)",
+    month = jun,
+    year = "2024",
+    address = "Mexico City, Mexico",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.naacl-long.1",
+    pages = "1--21",
 }
+
 ```
 
