@@ -1,6 +1,6 @@
 # Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences  
 
-Accepted by NAACL 2024 Main Conference, [Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences](https://aclanthology.org/2024.naacl-long.1.pdf)
+Accepted by NAACL 2024 Main Conference (Oral Presentation), [Named Entity Recognition Under Domain Shift via Metric Learning for Life Sciences](https://aclanthology.org/2024.naacl-long.1.pdf)
 
 ## Overview
 
